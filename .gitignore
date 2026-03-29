@@ -4,9 +4,8 @@ node_modules/
 # build output
 dist/
 
-# data files (large / generated)
+# large source data file (download from Scryfall bulk data API)
 oracle-cards.json
-src/data/
 
 # Python
 __pycache__/
