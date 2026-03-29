@@ -24,6 +24,7 @@ from unique_words import (
     find_unique_word_cards,
     clean_text,
     tokenize,
+    download_bulk_file,
 )
 
 BULK_FILE = Path(__file__).parent / "oracle-cards.json"
@@ -81,8 +82,8 @@ def main():
 
     bulk_path = Path(args.bulk_file)
     if not bulk_path.exists():
-        print(f"ERROR: {bulk_path} not found.", file=sys.stderr)
-        sys.exit(1)
+        print(f"{bulk_path} not found — downloading from Scryfall...", file=sys.stderr)
+        download_bulk_file(bulk_path)
 
     print(f"Loading cards from {bulk_path} ...", file=sys.stderr)
     with open(bulk_path, encoding="utf-8") as f:

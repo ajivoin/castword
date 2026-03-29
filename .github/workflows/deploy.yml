@@ -23,6 +23,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ── Data prep ────────────────────────────────────────────────────────────
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Cache the 162 MB Scryfall bulk file; refresh weekly
+      - name: Get cache week key
+        id: week
+        run: echo "value=$(date -u +%Y-W%V)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Scryfall bulk data
+        uses: actions/cache@v4
+        with:
+          path: oracle-cards.json
+          key: scryfall-${{ steps.week.outputs.value }}
+
+      # If cache missed, prepare_data.py downloads oracle-cards.json automatically
+      - name: Generate game data
+        run: python prepare_data.py
+
+      # ── Build ────────────────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -32,6 +53,7 @@ jobs:
 
       - run: npm run build
 
+      # ── Deploy ───────────────────────────────────────────────────────────────
       - uses: actions/configure-pages@v4
 
       - uses: actions/upload-pages-artifact@v3
