@@ -14,7 +14,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1 className="app-title">MTG Unique</h1>
+        <h1 className="app-title">Castword</h1>
         <p className="app-subtitle">Guess the card from its unique word</p>
         <ModeToggle mode={mode} variant={variant} onSwitch={switchMode} />
       </header>
