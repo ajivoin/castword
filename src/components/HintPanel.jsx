@@ -43,7 +43,13 @@ function renderText(text, uniqueWords, cardName) {
   })
 }
 
-// Renders a mana cost string like "{2}{U}{U}" as styled spans
+// Maps a symbol string (contents of {…}) to the mana-font CSS class suffix.
+// e.g. "W" → "w", "W/U" → "wu", "W/P" → "wp", "2/W" → "2w"
+function symClass(sym) {
+  return sym.toLowerCase().replace('/', '')
+}
+
+// Renders a mana cost string like "{2}{U}{U}" using mana-font icons
 function ManaCost({ cost }) {
   if (!cost) return <span className="mana-cost">—</span>
   const parts = cost.split(/(\{[^}]+\})/).filter(Boolean)
@@ -51,7 +57,7 @@ function ManaCost({ cost }) {
     <span className="mana-cost">
       {parts.map((p, i) =>
         p.startsWith('{') ? (
-          <span key={i} className="mana-sym">{p}</span>
+          <i key={i} className={`ms ms-${symClass(p.slice(1, -1))} ms-cost`} aria-label={p} />
         ) : p
       )}
     </span>

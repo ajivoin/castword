@@ -181,17 +181,8 @@ mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: in
 }
 
 /* mana symbols */
-.mana-cost { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
-
-.mana-sym {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-size: 0.8rem;
-  font-family: monospace;
-  color: var(--accent);
-}
+.mana-cost { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+.mana-cost .ms { font-size: 1.4rem; }
 
 .oracle-text {
   white-space: pre-wrap;
