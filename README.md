@@ -2,7 +2,6 @@
 
 A daily Magic: The Gathering guessing game. Each puzzle gives you a word that appears on exactly one card — your job is to name that card.
 
-**Play at:** [castword.com](https://castword.com) <!-- update when deployed -->
 
 ## How to play
 
