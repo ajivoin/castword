@@ -5,7 +5,7 @@ import { useGame } from './hooks/useGame.js'
 export default function App() {
   const {
     mode, variant, streak,
-    switchMode, submitGuess, newGame, advanceRound,
+    switchMode, submitGuess, skipTurn, newGame, advanceRound,
     gameState, campaign,
     nextVariant, allRoundsComplete,
     maxGuesses,
@@ -28,6 +28,7 @@ export default function App() {
           nextVariant={nextVariant}
           allRoundsComplete={allRoundsComplete}
           onGuess={submitGuess}
+          onSkip={skipTurn}
           onPlayAgain={newGame}
           onAdvance={advanceRound}
           maxGuesses={maxGuesses}

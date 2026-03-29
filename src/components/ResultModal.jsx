@@ -4,7 +4,7 @@ import { VARIANT_SEQUENCE, VARIANT_LABELS } from '../hooks/useGame.js'
 const HINT_EMOJIS = ['🟨', '🟧', '🟥', '⬛']
 
 function guessEmojis(guesses) {
-  return guesses.map((g, i) => g.correct ? '🟩' : HINT_EMOJIS[Math.min(i, HINT_EMOJIS.length - 1)]).join('')
+  return guesses.map((g, i) => g.correct ? '🟩' : g.skipped ? '⬜' : HINT_EMOJIS[Math.min(i, HINT_EMOJIS.length - 1)]).join('')
 }
 
 function buildRoundShareText(guesses, maxGuesses) {
@@ -94,9 +94,9 @@ export default function ResultModal({
         {/* Guess history */}
         <div className="guess-history">
           {guesses.map((g, i) => (
-            <div key={i} className={`guess-row ${g.correct ? 'correct' : 'wrong'}`}>
-              <span className="guess-icon">{g.correct ? '🟩' : HINT_EMOJIS[Math.min(i, HINT_EMOJIS.length - 1)]}</span>
-              <span className="guess-name">{g.value}</span>
+            <div key={i} className={`guess-row ${g.skipped ? 'skipped' : g.correct ? 'correct' : 'wrong'}`}>
+              <span className="guess-icon">{g.skipped ? '⬜' : g.correct ? '🟩' : HINT_EMOJIS[Math.min(i, HINT_EMOJIS.length - 1)]}</span>
+              <span className="guess-name">{g.skipped ? 'Skipped' : g.value}</span>
             </div>
           ))}
         </div>

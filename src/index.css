@@ -210,7 +210,32 @@ mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: in
 
 .guess-input-wrap { position: relative; }
 
+.guess-input-row-wrap { display: flex; gap: 8px; align-items: flex-start; }
+.guess-input-row-wrap .guess-input-wrap { flex: 1; }
+
 .guess-input-row { display: flex; gap: 8px; }
+
+.btn-skip, .btn-give-up {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btn-skip {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.btn-skip:hover { background: var(--border); color: var(--text); }
+
+.btn-give-up {
+  background: color-mix(in srgb, var(--red) 15%, var(--surface2));
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  color: var(--red);
+}
+.btn-give-up:hover { background: color-mix(in srgb, var(--red) 25%, var(--surface2)); }
 
 .guess-input {
   width: 100%;
@@ -268,8 +293,9 @@ mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: in
   border: 1px solid var(--border);
 }
 
-.past-guess.correct { border-color: var(--green); color: var(--green); }
-.past-guess.wrong   { color: var(--text-muted); }
+.past-guess.correct  { border-color: var(--green); color: var(--green); }
+.past-guess.wrong    { color: var(--text-muted); }
+.past-guess.skipped  { color: var(--text-muted); font-style: italic; }
 
 /* ── Result modal ── */
 .modal-overlay {
@@ -402,8 +428,9 @@ mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: in
   font-size: 0.85rem;
 }
 
-.guess-row.correct { color: var(--green); }
-.guess-row.wrong   { color: var(--text-muted); }
+.guess-row.correct  { color: var(--green); }
+.guess-row.wrong    { color: var(--text-muted); }
+.guess-row.skipped  { color: var(--text-muted); font-style: italic; }
 
 .modal-actions {
   display: flex;

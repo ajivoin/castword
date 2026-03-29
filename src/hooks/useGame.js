@@ -176,6 +176,21 @@ export function useGame() {
     })
   }, [])
 
+  const skipTurn = useCallback(() => {
+    setGameState((prev) => {
+      if (prev.status !== 'playing') return prev
+
+      const newGuesses = [...prev.guesses, { skipped: true }]
+      const newHints   = Math.min(prev.hintsRevealed + 1, 3)
+      const lost       = newGuesses.length >= MAX_GUESSES
+      const status     = lost ? 'lost' : 'playing'
+
+      if (status === 'lost') setStreak(0)
+
+      return { ...prev, guesses: newGuesses, hintsRevealed: newHints, status }
+    })
+  }, [])
+
   const newGame = useCallback(() => {
     setGameState((prev) => initialPlayState(pickRandomCard(variant, prev.card.name)))
   }, [variant])
@@ -186,7 +201,7 @@ export function useGame() {
 
   return {
     mode, variant, streak,
-    switchMode, submitGuess, newGame, advanceRound,
+    switchMode, submitGuess, skipTurn, newGame, advanceRound,
     gameState, campaign,
     nextVariant, allRoundsComplete,
     maxGuesses: MAX_GUESSES,

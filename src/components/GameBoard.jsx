@@ -5,7 +5,7 @@ import ResultModal from './ResultModal.jsx'
 
 const HINT_EMOJIS = ['🟨', '🟧', '🟥', '⬛']
 
-export default function GameBoard({ mode, variant, streak, gameState, onGuess, onPlayAgain, onAdvance, maxGuesses, nextVariant, allRoundsComplete, campaign }) {
+export default function GameBoard({ mode, variant, streak, gameState, onGuess, onSkip, onPlayAgain, onAdvance, maxGuesses, nextVariant, allRoundsComplete, campaign }) {
   const { card, hintsRevealed, guesses, status } = gameState
   const done = status !== 'playing'
   const [modalDismissed, setModalDismissed] = useState(false)
@@ -26,16 +26,27 @@ export default function GameBoard({ mode, variant, streak, gameState, onGuess, o
 
       {!done && (
         <div className="guess-section">
-          <GuessInput
-            onGuess={onGuess}
-            disabled={done}
-            pastGuesses={guesses}
-          />
+          <div className="guess-input-row-wrap">
+            <GuessInput
+              onGuess={onGuess}
+              disabled={done}
+              pastGuesses={guesses}
+            />
+            {(hintsRevealed < 3 || guesses.length === maxGuesses - 1) && (
+              <button
+                className={guesses.length === maxGuesses - 1 ? 'btn-give-up' : 'btn-skip'}
+                onClick={onSkip}
+                title={guesses.length === maxGuesses - 1 ? 'End the game' : 'Reveal next hint'}
+              >
+                {guesses.length === maxGuesses - 1 ? 'Give Up' : 'Skip'}
+              </button>
+            )}
+          </div>
           {guesses.length > 0 && (
             <div className="past-guesses">
               {guesses.map((g, i) => (
-                <div key={i} className={`past-guess ${g.correct ? 'correct' : 'wrong'}`}>
-                  {g.correct ? '🟩' : '🟥'} {g.value}
+                <div key={i} className={`past-guess ${g.skipped ? 'skipped' : g.correct ? 'correct' : 'wrong'}`}>
+                  {g.skipped ? '⬜ Skipped' : g.correct ? `🟩 ${g.value}` : `🟥 ${g.value}`}
                 </div>
               ))}
             </div>
@@ -47,7 +58,7 @@ export default function GameBoard({ mode, variant, streak, gameState, onGuess, o
         <div className={`result-banner ${status}`}>
           <span>{status === 'won' ? '✓ Correct!' : `✗ ${card.name}`}</span>
           <span className="result-banner-guesses">
-            {guesses.map((g, i) => g.correct ? '🟩' : HINT_EMOJIS[Math.min(i, HINT_EMOJIS.length - 1)]).join('')}
+            {guesses.map((g, i) => g.correct ? '🟩' : g.skipped ? '⬜' : HINT_EMOJIS[Math.min(i, HINT_EMOJIS.length - 1)]).join('')}
           </span>
           <button className="result-banner-reopen" onClick={() => setModalDismissed(false)}>
             Details

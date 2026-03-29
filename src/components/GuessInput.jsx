@@ -10,7 +10,7 @@ export default function GuessInput({ onGuess, disabled, pastGuesses }) {
   const inputRef = useRef(null)
   const listRef = useRef(null)
 
-  const pastSet = new Set(pastGuesses.map((g) => g.value.toLowerCase()))
+  const pastSet = new Set(pastGuesses.filter((g) => !g.skipped).map((g) => g.value.toLowerCase()))
 
   useEffect(() => {
     if (!disabled) inputRef.current?.focus()
