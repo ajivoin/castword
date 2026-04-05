@@ -69,11 +69,13 @@ const HINT_DEFS_NORMAL = [
   { id: 'type',   label: 'Type' },
   { id: 'cost',   label: 'Mana cost' },
   { id: 'text',   label: 'Card text' },
+  { id: 'flavor', label: 'Flavor text' },
 ]
 
 const HINT_DEFS_BONUS = [
   { id: 'words',  label: 'Unique flavor word(s)' },
   { id: 'type',   label: 'Type' },
+  { id: 'cost',   label: 'Mana cost' },
   { id: 'text',   label: 'Card text' },
   { id: 'flavor', label: 'Flavor text' },
 ]
@@ -81,6 +83,7 @@ const HINT_DEFS_BONUS = [
 const HINT_DEFS_WILDCARD = [
   { id: 'words',  label: 'Unique word(s)' },
   { id: 'type',   label: 'Type' },
+  { id: 'cost',   label: 'Mana cost' },
   { id: 'text',   label: 'Card text' },
   { id: 'flavor', label: 'Flavor text' },
 ]
