@@ -2,13 +2,14 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import gameData from '../data/game-data.json'
 import flavorData from '../data/flavor-data.json'
 import wildcardData from '../data/wildcard-data.json'
+import easyData from '../data/easy-data.json'
 
 const MAX_GUESSES = 5
 
-const DATA = { normal: gameData, bonus: flavorData, wildcard: wildcardData }
+const DATA = { easy: easyData, normal: gameData, bonus: flavorData, wildcard: wildcardData }
 
 export const VARIANT_SEQUENCE = ['normal', 'bonus', 'wildcard']
-export const VARIANT_LABELS   = { normal: 'Oracle', bonus: 'Flavor ✦', wildcard: 'Wildcard 🃏' }
+export const VARIANT_LABELS   = { easy: 'Easy ★', normal: 'Oracle', bonus: 'Flavor ✦', wildcard: 'Wildcard 🃏' }
 
 // ── Storage helpers ──────────────────────────────────────────────────────────
 

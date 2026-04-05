@@ -27,10 +27,12 @@ from unique_words import (
     download_bulk_file,
 )
 
-BULK_FILE = Path(__file__).parent / "oracle-cards.json"
-OUT_DIR = Path(__file__).parent / "src" / "data"
+BULK_FILE    = Path(__file__).parent / "oracle-cards.json"
+EDHREC_CACHE = Path(__file__).parent / "edhrec-cache.json"
+OUT_DIR      = Path(__file__).parent / "src" / "data"
 
-MIN_WORD_LEN = 3
+MIN_WORD_LEN      = 3
+EASY_MIN_DECKS    = 700   # cards must appear in this many EDHRec decks for easy mode
 
 
 def get_image_url(card: dict) -> str:
@@ -195,6 +197,52 @@ def main():
         })
     print(f"  {len(wildcard_data):,} wildcard puzzle cards found.", file=sys.stderr)
 
+    # ── Easy mode data (mainline cards with 700+ EDHRec decks, oracle-text unique words) ──
+    easy_data = []
+    if EDHREC_CACHE.exists():
+        with open(EDHREC_CACHE, encoding="utf-8") as f:
+            edhrec_deck_counts: dict[str, int | None] = json.load(f)
+
+        popular = [
+            c for c in mainline
+            if (edhrec_deck_counts.get(c["name"]) or 0) >= EASY_MIN_DECKS
+        ]
+        print(
+            f"  {len(popular):,} mainline cards with {EASY_MIN_DECKS}+ EDHRec decks.",
+            file=sys.stderr,
+        )
+
+        wc_easy, meta_easy = build_word_card_map(
+            popular,
+            min_word_len=MIN_WORD_LEN,
+            include_flavor=False,
+            exclude_reminder=False,
+        )
+        easy_results = find_unique_word_cards(wc_easy, meta_easy)
+        print(f"  {len(easy_results):,} easy-mode puzzle cards found.", file=sys.stderr)
+
+        for entry in easy_results:
+            oid  = entry["oracle_id"]
+            extra = lookup.get(oid, {})
+            easy_data.append({
+                "name":         entry["name"],
+                "oracle_id":    oid,
+                "scryfall_uri": entry["scryfall_uri"],
+                "type_line":    entry["type_line"],
+                "mana_cost":    extra.get("mana_cost", ""),
+                "colors":       extra.get("colors", []),
+                "oracle_text":  extra.get("oracle_text", ""),
+                "image_url":    extra.get("image_url", ""),
+                "unique_words": entry["unique_words"],
+                "edhrec_decks": edhrec_deck_counts.get(entry["name"], 0),
+            })
+    else:
+        print(
+            f"  {EDHREC_CACHE} not found — skipping easy-mode data.\n"
+            f"  Run: python fetch_edhrec.py   to build the EDHRec cache first.",
+            file=sys.stderr,
+        )
+
     # All card names for autocomplete
     card_names = sorted({card["name"] for card in filtered})
     print(f"  {len(card_names):,} card names for autocomplete.", file=sys.stderr)
@@ -221,6 +269,11 @@ def main():
     with open(names_path, "w", encoding="utf-8") as f:
         json.dump(card_names, f, separators=(",", ":"))
     print(f"Wrote {names_path} ({names_path.stat().st_size / 1024:.0f} KB)", file=sys.stderr)
+
+    easy_data_path = OUT_DIR / "easy-data.json"
+    with open(easy_data_path, "w", encoding="utf-8") as f:
+        json.dump(easy_data, f, separators=(",", ":"))
+    print(f"Wrote {easy_data_path} ({easy_data_path.stat().st_size / 1024:.0f} KB)", file=sys.stderr)
 
     print("Done.", file=sys.stderr)
 
