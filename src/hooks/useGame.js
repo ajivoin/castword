@@ -3,7 +3,7 @@ import gameData from '../data/game-data.json'
 import flavorData from '../data/flavor-data.json'
 import wildcardData from '../data/wildcard-data.json'
 
-const MAX_GUESSES = 4
+const MAX_GUESSES = 5
 
 const DATA = { normal: gameData, bonus: flavorData, wildcard: wildcardData }
 
@@ -165,7 +165,7 @@ export function useGame() {
 
       const correct   = guessName.toLowerCase() === prev.card.name.toLowerCase()
       const newGuesses = [...prev.guesses, { value: guessName, correct }]
-      const newHints   = correct ? prev.hintsRevealed : Math.min(prev.hintsRevealed + 1, 3)
+      const newHints   = correct ? prev.hintsRevealed : Math.min(prev.hintsRevealed + 1, 4)
       const lost       = !correct && newGuesses.length >= MAX_GUESSES
       const status     = correct ? 'won' : lost ? 'lost' : 'playing'
 
@@ -181,7 +181,7 @@ export function useGame() {
       if (prev.status !== 'playing') return prev
 
       const newGuesses = [...prev.guesses, { skipped: true }]
-      const newHints   = Math.min(prev.hintsRevealed + 1, 3)
+      const newHints   = Math.min(prev.hintsRevealed + 1, 4)
       const lost       = newGuesses.length >= MAX_GUESSES
       const status     = lost ? 'lost' : 'playing'
 
