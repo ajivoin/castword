@@ -197,26 +197,36 @@ def main():
         })
     print(f"  {len(wildcard_data):,} wildcard puzzle cards found.", file=sys.stderr)
 
-    # ── Easy mode data (top 33% by EDHRec rank, oracle-text unique words) ──────
+    # ── Easy mode data (top 33% by EDHRec rank, oracle+flavor unique words) ──────
     ranked = sorted(
         [c for c in mainline if c.get("edhrec_rank") is not None],
         key=lambda c: c["edhrec_rank"],
     )
     cutoff_rank = ranked[math.ceil(len(ranked) * EASY_TOP_FRACTION) - 1]["edhrec_rank"]
-    popular = [c for c in mainline if (c.get("edhrec_rank") or math.inf) <= cutoff_rank]
+    popular_ids = {
+        c["oracle_id"]
+        for c in mainline
+        if (c.get("edhrec_rank") or math.inf) <= cutoff_rank and c.get("oracle_id")
+    }
     print(
-        f"  {len(popular):,} mainline cards in top {EASY_TOP_FRACTION:.0%} by EDHRec rank"
+        f"  {len(popular_ids):,} mainline cards in top {EASY_TOP_FRACTION:.0%} by EDHRec rank"
         f" (rank ≤ {cutoff_rank:,}).",
         file=sys.stderr,
     )
 
+    # Compute uniqueness across ALL mainline cards (oracle + flavor) to avoid
+    # false non-dupes: a word that only one popular card uses may still appear
+    # on unpopular cards, making it non-unique in the full set.
     wc_easy, meta_easy = build_word_card_map(
-        popular,
+        mainline,
         min_word_len=MIN_WORD_LEN,
-        include_flavor=False,
+        include_flavor=True,
         exclude_reminder=False,
     )
-    easy_results = find_unique_word_cards(wc_easy, meta_easy)
+    all_mainline_results = find_unique_word_cards(wc_easy, meta_easy)
+
+    # Filter to popular cards only after establishing true global uniqueness
+    easy_results = [r for r in all_mainline_results if r["oracle_id"] in popular_ids]
     print(f"  {len(easy_results):,} easy-mode puzzle cards found.", file=sys.stderr)
 
     easy_data = []
@@ -231,6 +241,7 @@ def main():
             "mana_cost":    extra.get("mana_cost", ""),
             "colors":       extra.get("colors", []),
             "oracle_text":  extra.get("oracle_text", ""),
+            "flavor_text":  extra.get("flavor_text", ""),
             "image_url":    extra.get("image_url", ""),
             "unique_words": entry["unique_words"],
             "edhrec_rank":  card_lookup[oid].get("edhrec_rank") if oid in card_lookup else None,
