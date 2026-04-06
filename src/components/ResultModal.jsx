@@ -15,7 +15,7 @@ function buildRoundShareText(guesses, maxGuesses) {
 
 function buildCampaignShareText(campaign, maxGuesses) {
   const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-  const lines = [`MTG Unique Daily — ${date}`]
+  const lines = [`Castword Daily — ${date}`]
   for (const v of VARIANT_SEQUENCE) {
     const result = campaign[v]
     if (!result) continue
@@ -29,8 +29,8 @@ function buildSingleShareText(mode, variant, guesses, maxGuesses, streak) {
   const date  = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const label = VARIANT_LABELS[variant]
   const header = mode === 'daily'
-    ? `MTG Unique ${label} — ${date} ${buildRoundShareText(guesses, maxGuesses)}`
-    : `MTG Unique ${label} (Infinite) ${buildRoundShareText(guesses, maxGuesses)} 🔥${streak}`
+    ? `Castword ${label} — ${date} ${buildRoundShareText(guesses, maxGuesses)}`
+    : `Castword ${label} (Infinite) ${buildRoundShareText(guesses, maxGuesses)} 🔥${streak}`
   return header
 }
 
