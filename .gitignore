@@ -21,3 +21,6 @@ __pycache__/
 # editor
 .DS_Store
 *.swp
+
+# local Claude Code instructions
+CLAUDE.md
