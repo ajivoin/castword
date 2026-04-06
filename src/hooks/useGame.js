@@ -11,6 +11,11 @@ const DATA = { easy: easyData, normal: gameData, bonus: flavorData, wildcard: wi
 export const VARIANT_SEQUENCE = ['normal', 'bonus', 'wildcard']
 export const VARIANT_LABELS   = { easy: 'Easy ★', normal: 'Oracle', bonus: 'Flavor ✦', wildcard: 'Wildcard 🃏' }
 
+// Variants with no cards (data not yet generated) are unavailable
+export const VARIANT_AVAILABLE = Object.fromEntries(
+  Object.entries(DATA).map(([k, v]) => [k, v.length > 0])
+)
+
 // ── Storage helpers ──────────────────────────────────────────────────────────
 
 function todayIndex() {
@@ -51,11 +56,13 @@ function saveCampaign(data) {
 
 function pickDailyCard(variant) {
   const pool = DATA[variant]
+  if (!pool.length) return null
   return pool[todayIndex() % pool.length]
 }
 
 function pickRandomCard(variant, excludeName) {
   const pool = DATA[variant]
+  if (!pool.length) return null
   let card
   do {
     card = pool[Math.floor(Math.random() * pool.length)]
