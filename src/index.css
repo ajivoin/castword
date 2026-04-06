@@ -104,6 +104,13 @@ mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: in
   color: var(--text);
 }
 
+/* Easy variant toggle */
+.variant-toggle button.easy { color: #22c55e; }
+.variant-toggle button.active.easy {
+  background: #22c55e;
+  color: #0e0e12;
+}
+
 /* Flavor/bonus variant toggle */
 .variant-toggle button.bonus { color: var(--accent2); }
 .variant-toggle button.active.bonus {

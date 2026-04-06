@@ -17,6 +17,12 @@ export default function ModeToggle({ mode, variant, onSwitch }) {
       </div>
       <div className="mode-toggle variant-toggle">
         <button
+          className={variant === 'easy' ? 'active easy' : 'easy'}
+          onClick={() => onSwitch(mode, 'easy')}
+        >
+          Easy ★
+        </button>
+        <button
           className={variant === 'normal' ? 'active' : ''}
           onClick={() => onSwitch(mode, 'normal')}
         >
