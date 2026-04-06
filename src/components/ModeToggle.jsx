@@ -1,3 +1,5 @@
+import { VARIANT_AVAILABLE } from '../hooks/useGame'
+
 export default function ModeToggle({ mode, variant, onSwitch }) {
   return (
     <div className="mode-toggle-wrap">
@@ -16,12 +18,14 @@ export default function ModeToggle({ mode, variant, onSwitch }) {
         </button>
       </div>
       <div className="mode-toggle variant-toggle">
-        <button
-          className={variant === 'easy' ? 'active easy' : 'easy'}
-          onClick={() => onSwitch(mode, 'easy')}
-        >
-          Easy ★
-        </button>
+        {VARIANT_AVAILABLE.easy && (
+          <button
+            className={variant === 'easy' ? 'active easy' : 'easy'}
+            onClick={() => onSwitch(mode, 'easy')}
+          >
+            Easy ★
+          </button>
+        )}
         <button
           className={variant === 'normal' ? 'active' : ''}
           onClick={() => onSwitch(mode, 'normal')}
