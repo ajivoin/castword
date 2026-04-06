@@ -22,6 +22,7 @@ function buildCampaignShareText(campaign, maxGuesses) {
     const label = VARIANT_LABELS[v].padEnd(10)
     lines.push(`${label} ${buildRoundShareText(result.guesses, maxGuesses)}`)
   }
+  lines.push('https://jivoin.com/castword')
   return lines.join('\n')
 }
 
@@ -31,7 +32,7 @@ function buildSingleShareText(mode, variant, guesses, maxGuesses, streak) {
   const header = mode === 'daily'
     ? `Castword ${label} — ${date} ${buildRoundShareText(guesses, maxGuesses)}`
     : `Castword ${label} (Infinite) ${buildRoundShareText(guesses, maxGuesses)} 🔥${streak}`
-  return header
+  return `${header}\nhttps://jivoin.com/castword`
 }
 
 export default function ResultModal({
