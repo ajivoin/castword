@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      # Cache data files; refresh Scryfall weekly, grow EDHRec incrementally
+      # Cache the 162 MB Scryfall bulk file; refresh weekly
       - name: Get cache week key
         id: week
         run: echo "value=$(date -u +%Y-W%V)" >> "$GITHUB_OUTPUT"
@@ -39,15 +39,7 @@ jobs:
           path: oracle-cards.json
           key: scryfall-${{ steps.week.outputs.value }}
 
-      # EDHRec cache is additive — restore latest snapshot, then fetch only new cards
-      - name: Cache EDHRec deck counts
-        uses: actions/cache@v4
-        with:
-          path: edhrec-cache.json
-          key: edhrec-${{ steps.week.outputs.value }}
-          restore-keys: edhrec-
-
-      # prepare_data.py downloads oracle-cards.json and fetches missing EDHRec entries automatically
+      # If cache missed, prepare_data.py downloads oracle-cards.json automatically
       - name: Generate game data
         run: python prepare_data.py
 

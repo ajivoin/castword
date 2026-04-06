@@ -13,6 +13,7 @@ Usage:
 """
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -26,14 +27,12 @@ from unique_words import (
     tokenize,
     download_bulk_file,
 )
-from fetch_edhrec import ensure_edhrec_cache
 
-BULK_FILE    = Path(__file__).parent / "oracle-cards.json"
-EDHREC_CACHE = Path(__file__).parent / "edhrec-cache.json"
-OUT_DIR      = Path(__file__).parent / "src" / "data"
+BULK_FILE = Path(__file__).parent / "oracle-cards.json"
+OUT_DIR   = Path(__file__).parent / "src" / "data"
 
 MIN_WORD_LEN      = 3
-EASY_MIN_DECKS    = 700   # cards must appear in this many EDHRec decks for easy mode
+EASY_TOP_FRACTION = 0.33  # keep cards in the top N% by EDHRec rank
 
 
 def get_image_url(card: dict) -> str:
@@ -198,16 +197,16 @@ def main():
         })
     print(f"  {len(wildcard_data):,} wildcard puzzle cards found.", file=sys.stderr)
 
-    # ── Easy mode data (mainline cards with 700+ EDHRec decks, oracle-text unique words) ──
-    mainline_names = [c["name"] for c in mainline]
-    edhrec_deck_counts = ensure_edhrec_cache(mainline_names, EDHREC_CACHE)
-
-    popular = [
-        c for c in mainline
-        if (edhrec_deck_counts.get(c["name"]) or 0) >= EASY_MIN_DECKS
-    ]
+    # ── Easy mode data (top 33% by EDHRec rank, oracle-text unique words) ──────
+    ranked = sorted(
+        [c for c in mainline if c.get("edhrec_rank") is not None],
+        key=lambda c: c["edhrec_rank"],
+    )
+    cutoff_rank = ranked[math.ceil(len(ranked) * EASY_TOP_FRACTION) - 1]["edhrec_rank"]
+    popular = [c for c in mainline if (c.get("edhrec_rank") or math.inf) <= cutoff_rank]
     print(
-        f"  {len(popular):,} mainline cards with {EASY_MIN_DECKS}+ EDHRec decks.",
+        f"  {len(popular):,} mainline cards in top {EASY_TOP_FRACTION:.0%} by EDHRec rank"
+        f" (rank ≤ {cutoff_rank:,}).",
         file=sys.stderr,
     )
 
@@ -234,7 +233,7 @@ def main():
             "oracle_text":  extra.get("oracle_text", ""),
             "image_url":    extra.get("image_url", ""),
             "unique_words": entry["unique_words"],
-            "edhrec_decks": edhrec_deck_counts.get(entry["name"], 0),
+            "edhrec_rank":  card_lookup[oid].get("edhrec_rank") if oid in card_lookup else None,
         })
 
     # All card names for autocomplete
