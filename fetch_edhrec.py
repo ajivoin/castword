@@ -2,12 +2,18 @@
 """
 fetch_edhrec.py
 
-Fetches deck-inclusion counts from EDHRec for all filtered MTG cards
-and saves them to edhrec-cache.json for use by prepare_data.py.
+Fetches deck-inclusion counts from EDHRec for MTG cards and caches them in
+edhrec-cache.json. Only cards not already in the cache are fetched, mirroring
+the Scryfall bulk-file caching pattern used by prepare_data.py.
 
-Usage:
-    python fetch_edhrec.py [--bulk-file oracle-cards.json] [--output edhrec-cache.json]
-                           [--delay 0.1] [--workers 4]
+Importable API:
+    from fetch_edhrec import ensure_edhrec_cache
+    cache = ensure_edhrec_cache(card_names, Path("edhrec-cache.json"))
+
+CLI usage:
+    python fetch_edhrec.py [--bulk-file oracle-cards.json]
+                           [--output edhrec-cache.json]
+                           [--delay 0.05] [--workers 8]
 """
 
 import json
@@ -19,11 +25,8 @@ import urllib.error
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent))
-from unique_words import filter_cards, download_bulk_file
-
-BULK_FILE  = Path(__file__).parent / "oracle-cards.json"
-CACHE_FILE = Path(__file__).parent / "edhrec-cache.json"
+CACHE_FILE  = Path(__file__).parent / "edhrec-cache.json"
+BULK_FILE   = Path(__file__).parent / "oracle-cards.json"
 
 EDHREC_BASE = "https://json.edhrec.com/cards/{slug}.json"
 HEADERS = {
@@ -34,13 +37,10 @@ HEADERS = {
 
 def card_to_edhrec_slug(name: str) -> str:
     """Convert a card name to an EDHRec URL slug."""
-    # For double-faced / split cards use only the front-face name
-    name = name.split(" // ")[0].strip()
+    name = name.split(" // ")[0].strip()          # front face only for DFCs
     slug = name.lower()
-    # Drop apostrophes and commas (e.g. "Teferi's" → "teferis")
-    slug = re.sub(r"[',]", "", slug)
-    # Replace any run of non-alphanumeric characters with a hyphen
-    slug = re.sub(r"[^a-z0-9]+", "-", slug)
+    slug = re.sub(r"[',]", "", slug)              # drop apostrophes/commas
+    slug = re.sub(r"[^a-z0-9]+", "-", slug)       # non-alphanumeric → hyphen
     return slug.strip("-")
 
 
@@ -51,8 +51,6 @@ def extract_num_decks(data: object) -> int | None:
     """
     if not isinstance(data, dict):
         return None
-
-    # Possible locations for num_decks
     candidates = [
         data,
         data.get("card") or {},
@@ -85,73 +83,54 @@ def fetch_num_decks(name: str) -> tuple[str, int | None]:
         req = urllib.request.Request(url, headers=HEADERS)
         with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read())
-        num = extract_num_decks(data)
-        return name, num
+        return name, extract_num_decks(data)
     except urllib.error.HTTPError as e:
-        if e.code == 404:
-            return name, 0
-        return name, None
+        return name, (0 if e.code == 404 else None)
     except Exception:
         return name, None
 
 
-def main() -> None:
-    import argparse
+def ensure_edhrec_cache(
+    card_names: list[str],
+    cache_path: Path = CACHE_FILE,
+    workers: int = 8,
+    delay: float = 0.05,
+    save_interval: int = 200,
+) -> dict[str, int | None]:
+    """
+    Ensure every name in card_names has an entry in the cache file.
+    Missing entries are fetched from EDHRec and the file is updated in place.
+    Returns the complete cache dict.
 
-    parser = argparse.ArgumentParser(description="Cache EDHRec deck counts for MTG cards.")
-    parser.add_argument("--bulk-file", default=str(BULK_FILE),
-                        help="Path to Scryfall oracle-cards.json (downloaded if missing).")
-    parser.add_argument("--output", default=str(CACHE_FILE),
-                        help="Output cache file path (default: edhrec-cache.json).")
-    parser.add_argument("--delay", type=float, default=0.05,
-                        help="Seconds to sleep between requests per worker (default: 0.05).")
-    parser.add_argument("--workers", type=int, default=8,
-                        help="Number of parallel fetch workers (default: 8).")
-    args = parser.parse_args()
-
-    bulk_path = Path(args.bulk_file)
-    if not bulk_path.exists():
-        print(f"{bulk_path} not found — downloading from Scryfall...", file=sys.stderr)
-        download_bulk_file(bulk_path)
-
-    out_path = Path(args.output)
-
-    # Load existing cache to skip already-fetched cards
+    Mirrors the Scryfall pattern in prepare_data.py:
+        if not bulk_path.exists():
+            download_bulk_file(bulk_path)
+    """
     cache: dict[str, int | None] = {}
-    if out_path.exists():
-        with open(out_path, encoding="utf-8") as f:
+    if cache_path.exists():
+        with open(cache_path, encoding="utf-8") as f:
             cache = json.load(f)
-        print(f"Loaded {len(cache):,} cached entries from {out_path}", file=sys.stderr)
+        print(f"  EDHRec cache: {len(cache):,} entries loaded from {cache_path}", file=sys.stderr)
 
-    print(f"Loading cards from {bulk_path} ...", file=sys.stderr)
-    with open(bulk_path, encoding="utf-8") as f:
-        all_cards = json.load(f)
-
-    filtered = filter_cards(all_cards, include_digital=False, include_alchemy=False)
-    all_names = sorted({c["name"] for c in filtered})
-    to_fetch  = [n for n in all_names if n not in cache]
+    to_fetch = [n for n in card_names if n not in cache]
+    if not to_fetch:
+        print(f"  EDHRec cache: up to date ({len(cache):,} entries).", file=sys.stderr)
+        return cache
 
     print(
-        f"  {len(all_names):,} unique card names total, "
-        f"{len(to_fetch):,} not yet cached.",
+        f"  EDHRec cache: {len(to_fetch):,} cards missing — fetching from EDHRec...",
         file=sys.stderr,
     )
 
-    if not to_fetch:
-        print("Nothing to fetch — cache is up to date.", file=sys.stderr)
-        return
+    done = errors = 0
 
-    done = 0
-    errors = 0
-    save_interval = 200
-
-    def fetch_with_delay(name: str) -> tuple[str, int | None]:
+    def _fetch(name: str) -> tuple[str, int | None]:
         result = fetch_num_decks(name)
-        time.sleep(args.delay)
+        time.sleep(delay)
         return result
 
-    with ThreadPoolExecutor(max_workers=args.workers) as pool:
-        futures = {pool.submit(fetch_with_delay, name): name for name in to_fetch}
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(_fetch, name): name for name in to_fetch}
         for future in as_completed(futures):
             name, num = future.result()
             cache[name] = num
@@ -160,27 +139,55 @@ def main() -> None:
                 errors += 1
 
             if done % save_interval == 0 or done == len(to_fetch):
-                with open(out_path, "w", encoding="utf-8") as f:
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(cache_path, "w", encoding="utf-8") as f:
                     json.dump(cache, f, separators=(",", ":"))
                 pct = done / len(to_fetch) * 100
                 print(
-                    f"  [{done}/{len(to_fetch)} {pct:.0f}%] "
-                    f"errors={errors}  last: {name} → {num}",
+                    f"  EDHRec cache: [{done}/{len(to_fetch)} {pct:.0f}%] "
+                    f"errors={errors}",
                     file=sys.stderr,
                 )
 
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(cache, f, separators=(",", ":"))
-
-    hit  = sum(1 for v in cache.values() if v is not None and v > 0)
-    miss = sum(1 for v in cache.values() if v == 0)
-    err  = sum(1 for v in cache.values() if v is None)
     print(
-        f"\nDone.  Total cached: {len(cache):,}  "
-        f"(found: {hit:,}, not-on-EDHREC: {miss:,}, errors: {err:,})",
+        f"  EDHRec cache: done. "
+        f"found={sum(1 for v in cache.values() if v)}  "
+        f"not-on-edhrec={sum(1 for v in cache.values() if v == 0)}  "
+        f"errors={errors}",
         file=sys.stderr,
     )
-    print(f"Wrote {out_path} ({out_path.stat().st_size / 1024:.0f} KB)", file=sys.stderr)
+    return cache
+
+
+def main() -> None:
+    import argparse
+    sys.path.insert(0, str(Path(__file__).parent))
+    from unique_words import filter_cards, download_bulk_file
+
+    parser = argparse.ArgumentParser(description="Cache EDHRec deck counts for MTG cards.")
+    parser.add_argument("--bulk-file", default=str(BULK_FILE))
+    parser.add_argument("--output",    default=str(CACHE_FILE))
+    parser.add_argument("--delay",   type=float, default=0.05)
+    parser.add_argument("--workers", type=int,   default=8)
+    args = parser.parse_args()
+
+    bulk_path = Path(args.bulk_file)
+    if not bulk_path.exists():
+        print(f"{bulk_path} not found — downloading from Scryfall...", file=sys.stderr)
+        download_bulk_file(bulk_path)
+
+    with open(bulk_path, encoding="utf-8") as f:
+        all_cards = json.load(f)
+
+    filtered   = filter_cards(all_cards, include_digital=False, include_alchemy=False)
+    card_names = sorted({c["name"] for c in filtered})
+
+    ensure_edhrec_cache(
+        card_names,
+        cache_path=Path(args.output),
+        workers=args.workers,
+        delay=args.delay,
+    )
 
 
 if __name__ == "__main__":
