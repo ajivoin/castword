@@ -38,7 +38,7 @@ export default function AboutModal({ onClose }) {
           <div className="about-variants">
             <div className="about-variant">
               <span className="about-variant-label easy-label">Easy ★</span>
-              <p>The unique word comes from rules or flavor text. Cards are limited to popular, well-known cards — great for newer players.</p>
+              <p>The unique word comes from a card's <em>rules text</em>. Cards are limited to popular, well-known cards — great for newer players.</p>
             </div>
             <div className="about-variant">
               <span className="about-variant-label">Oracle</span>

@@ -64,6 +64,13 @@ function ManaCost({ cost }) {
   )
 }
 
+const HINT_DEFS_EASY = [
+  { id: 'words',  label: 'Unique word(s)' },
+  { id: 'cost',   label: 'Mana cost' },
+  { id: 'type',   label: 'Type' },
+  { id: 'text',   label: 'Card text' },
+]
+
 const HINT_DEFS_NORMAL = [
   { id: 'words',  label: 'Unique word(s)' },
   { id: 'cost',   label: 'Mana cost' },
@@ -88,7 +95,7 @@ const HINT_DEFS_WILDCARD = [
   { id: 'flavor', label: 'Flavor text' },
 ]
 
-const HINT_DEFS = { normal: HINT_DEFS_NORMAL, bonus: HINT_DEFS_BONUS, wildcard: HINT_DEFS_WILDCARD }
+const HINT_DEFS = { easy: HINT_DEFS_EASY, normal: HINT_DEFS_NORMAL, bonus: HINT_DEFS_BONUS, wildcard: HINT_DEFS_WILDCARD }
 
 export default function HintPanel({ card, hintsRevealed, status, variant = 'normal' }) {
   const hintDefs = HINT_DEFS[variant] ?? HINT_DEFS_NORMAL
