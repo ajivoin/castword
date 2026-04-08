@@ -16,6 +16,17 @@ export const VARIANT_AVAILABLE = Object.fromEntries(
   Object.entries(DATA).map(([k, v]) => [k, v.length > 0])
 )
 
+// URL hash ↔ variant mapping
+export const VARIANT_TO_HASH = { easy: 'easy', normal: 'oracle', bonus: 'flavor', wildcard: 'wildcard' }
+const HASH_TO_VARIANT = { easy: 'easy', oracle: 'normal', flavor: 'bonus', wildcard: 'wildcard' }
+
+function variantFromHash() {
+  const hash = window.location.hash.slice(1).toLowerCase()
+  const v = HASH_TO_VARIANT[hash]
+  if (!v || !VARIANT_AVAILABLE[v]) return null
+  return v
+}
+
 // ── Storage helpers ──────────────────────────────────────────────────────────
 
 function todayIndex() {
@@ -81,12 +92,13 @@ const initialPlayState = (card) => ({
 
 export function useGame() {
   const [mode, setMode]       = useState('daily')
-  const [variant, setVariant] = useState('normal')
+  const [variant, setVariant] = useState(() => variantFromHash() ?? 'normal')
   const [streak, setStreak]   = useState(0)
 
   const [gameState, setGameState] = useState(() => {
-    const saved = loadDailyState('normal')
-    return saved ?? initialPlayState(pickDailyCard('normal'))
+    const v = variantFromHash() ?? 'normal'
+    const saved = loadDailyState(v)
+    return saved ?? initialPlayState(pickDailyCard(v))
   })
 
   // Campaign: records each completed daily round { [variant]: { guesses, status } }
@@ -166,6 +178,14 @@ export function useGame() {
   useEffect(() => {
     if (mode === 'daily') saveDailyState(variant, gameState)
   }, [mode, variant, gameState])
+
+  // Keep URL hash in sync with current variant
+  useEffect(() => {
+    const newHash = '#' + VARIANT_TO_HASH[variant]
+    if (window.location.hash !== newHash) {
+      history.replaceState(null, '', newHash)
+    }
+  }, [variant])
 
   const submitGuess = useCallback((guessName) => {
     setGameState((prev) => {

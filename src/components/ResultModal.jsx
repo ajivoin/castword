@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { VARIANT_SEQUENCE, VARIANT_LABELS } from '../hooks/useGame.js'
+import { VARIANT_SEQUENCE, VARIANT_LABELS, VARIANT_TO_HASH } from '../hooks/useGame.js'
 
 const HINT_EMOJIS = ['🟨', '🟧', '🟥', '🟫', '⬛']
 
@@ -32,7 +32,7 @@ function buildSingleShareText(mode, variant, guesses, maxGuesses, streak) {
   const header = mode === 'daily'
     ? `Castword ${label} — ${date} ${buildRoundShareText(guesses, maxGuesses)}`
     : `Castword ${label} (Infinite) ${buildRoundShareText(guesses, maxGuesses)} 🔥${streak}`
-  return `${header}\nhttps://jivoin.com/castword`
+  return `${header}\nhttps://jivoin.com/castword#${VARIANT_TO_HASH[variant]}`
 }
 
 export default function ResultModal({
