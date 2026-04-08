@@ -241,6 +241,7 @@ def main():
             "mana_cost":    extra.get("mana_cost", ""),
             "colors":       extra.get("colors", []),
             "oracle_text":  extra.get("oracle_text", ""),
+            "flavor_text":  extra.get("flavor_text", ""),
             "image_url":    extra.get("image_url", ""),
             "unique_words": entry["unique_words"],
             "edhrec_rank":  card_lookup[oid].get("edhrec_rank") if oid in card_lookup else None,
