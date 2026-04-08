@@ -214,13 +214,13 @@ def main():
         file=sys.stderr,
     )
 
-    # Compute uniqueness across ALL mainline cards (oracle + flavor) to avoid
+    # Compute uniqueness across ALL mainline cards (oracle only) to avoid
     # false non-dupes: a word that only one popular card uses may still appear
     # on unpopular cards, making it non-unique in the full set.
     wc_easy, meta_easy = build_word_card_map(
         mainline,
         min_word_len=MIN_WORD_LEN,
-        include_flavor=True,
+        include_flavor=False,
         exclude_reminder=False,
     )
     all_mainline_results = find_unique_word_cards(wc_easy, meta_easy)
