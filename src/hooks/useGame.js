@@ -17,7 +17,7 @@ export const VARIANT_AVAILABLE = Object.fromEntries(
 )
 
 // URL hash ↔ variant mapping
-const VARIANT_TO_HASH = { easy: 'easy', normal: 'oracle', bonus: 'flavor', wildcard: 'wildcard' }
+export const VARIANT_TO_HASH = { easy: 'easy', normal: 'oracle', bonus: 'flavor', wildcard: 'wildcard' }
 const HASH_TO_VARIANT = { easy: 'easy', oracle: 'normal', flavor: 'bonus', wildcard: 'wildcard' }
 
 function variantFromHash() {
