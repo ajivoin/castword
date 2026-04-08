@@ -4,14 +4,14 @@ This document describes conventions for AI agents contributing to this repositor
 
 ## Git identity
 
-**Commit as the user, not as the agent.** Before committing, set git identity to match the repository owner:
+**Commit as the user, not as the agent.** Commits should reflect the identity of the person on whose behalf the work is being done — check the existing git config or ask them for their name and email if not already set.
 
 ```bash
-git config user.name "ajivoin"
-git config user.email "<email>"
+git config user.name   # verify current identity
+git config user.email
 ```
 
-Do not commit with AI-generated names like "Claude" or "GitHub Copilot".
+If these are set to an AI agent's identity (e.g. "Claude", "GitHub Copilot", a `noreply@anthropic.com` address), update them to match the actual user before committing. Do not leave AI-generated identities in commits.
 
 ## Commit messages
 
