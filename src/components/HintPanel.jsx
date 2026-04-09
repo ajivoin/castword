@@ -1,4 +1,4 @@
-function escapeRe(s) {
+export function escapeRe(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
@@ -6,7 +6,7 @@ function escapeRe(s) {
 // matches take priority in the alternation.
 // Handles: full name, each face of a split card, and the first name of
 // legendary creatures (the part before the first comma).
-function censorPatterns(cardName) {
+export function censorPatterns(cardName) {
   const faces = cardName.split(' // ').map((s) => s.trim())
   const parts = new Set([cardName])
   for (const face of faces) {
@@ -19,7 +19,7 @@ function censorPatterns(cardName) {
 
 // Renders text with name redaction + unique-word highlighting.
 // Uses split-on-capturing-group: odd indices in the result are matches.
-function renderText(text, uniqueWords, cardName) {
+export function renderText(text, uniqueWords, cardName) {
   const nameRe = new RegExp(
     `(${censorPatterns(cardName).map(escapeRe).join('|')})`,
     'gi',
@@ -45,7 +45,7 @@ function renderText(text, uniqueWords, cardName) {
 
 // Maps a symbol string (contents of {…}) to the mana-font CSS class suffix.
 // e.g. "W" → "w", "W/U" → "wu", "W/P" → "wp", "2/W" → "2w"
-function symClass(sym) {
+export function symClass(sym) {
   return sym.toLowerCase().replace('/', '')
 }
 

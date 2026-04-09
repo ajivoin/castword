@@ -3,17 +3,17 @@ import { VARIANT_SEQUENCE, VARIANT_LABELS, VARIANT_TO_HASH } from '../hooks/useG
 
 const HINT_EMOJIS = ['🟨', '🟧', '🟥', '🟫', '⬛']
 
-function guessEmojis(guesses) {
+export function guessEmojis(guesses) {
   return guesses.map((g, i) => g.correct ? '🟩' : g.skipped ? '⬜' : HINT_EMOJIS[Math.min(i, HINT_EMOJIS.length - 1)]).join('')
 }
 
-function buildRoundShareText(guesses, maxGuesses) {
+export function buildRoundShareText(guesses, maxGuesses) {
   const won   = guesses.some((g) => g.correct)
   const score = won ? guesses.length : 'X'
   return `${score}/${maxGuesses} ${guessEmojis(guesses)}`
 }
 
-function buildCampaignShareText(campaign, maxGuesses) {
+export function buildCampaignShareText(campaign, maxGuesses) {
   const date = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const lines = [`Castword Daily — ${date}`]
   for (const v of VARIANT_SEQUENCE) {
@@ -26,7 +26,7 @@ function buildCampaignShareText(campaign, maxGuesses) {
   return lines.join('\n')
 }
 
-function buildSingleShareText(mode, variant, guesses, maxGuesses, streak) {
+export function buildSingleShareText(mode, variant, guesses, maxGuesses, streak) {
   const date  = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   const label = VARIANT_LABELS[variant]
   const header = mode === 'daily'
