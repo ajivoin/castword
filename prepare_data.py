@@ -45,11 +45,28 @@ def get_image_url(card: dict) -> str:
     return ""
 
 
+# Layouts that render each face as a distinct, separate card image
+DOUBLE_FACED_LAYOUTS = {"transform", "modal_dfc", "reversible_card", "double_faced_token"}
+
+
 def get_image_url_back(card: dict) -> str:
-    """Return the back-face image URL for double-sided cards, or empty string."""
+    """Return the back-face image URL for double-sided cards, or empty string.
+
+    Split/adventure/flip cards have a single combined image, so they return "".
+    Transform and MDFC cards have separate per-face images.
+    """
+    if card.get("layout") not in DOUBLE_FACED_LAYOUTS:
+        return ""
     faces = card.get("card_faces", [])
-    if len(faces) >= 2 and "image_uris" in faces[1]:
+    if len(faces) < 2:
+        return ""
+    # Prefer explicit image_uris on the back face
+    if "image_uris" in faces[1]:
         return faces[1]["image_uris"].get("normal", "")
+    # Fallback: derive from the front URL — Scryfall uses /front/ vs /back/ in the path
+    front_url = get_image_url(card)
+    if "/front/" in front_url:
+        return front_url.replace("/front/", "/back/", 1)
     return ""
 
 
