@@ -393,7 +393,7 @@ mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: in
 
 .card-images {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 8px;
   flex-shrink: 0;
 }
