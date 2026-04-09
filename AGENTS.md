@@ -63,8 +63,21 @@ Data files in `src/data/` are checked into the repo and must be regenerated when
 
 ## Testing changes
 
-There is no automated test suite. Before committing:
+Before committing, run the full test suite:
 
-1. Run `npm run build` and confirm it succeeds with no errors.
-2. Run `npm run preview` and manually verify the affected variants still work correctly.
-3. If the data pipeline changed, confirm all five `src/data/*.json` files were regenerated and spot-check a few entries.
+```bash
+npm test                  # JavaScript tests (Vitest)
+python -m pytest tests/   # Python tests
+npm run build             # confirm production build succeeds
+```
+
+### New features and bug fixes must include tests
+
+- **Python changes** (filtering logic, data pipeline): add or update tests in `tests/test_unique_words.py` or `tests/test_prepare_data.py`.
+- **React/JS changes** (components, hooks): add or update tests alongside the affected file (e.g. `src/hooks/useGame.test.js`).
+- Tests should cover the new behavior directly and any edge cases that are easy to get wrong.
+
+### Additional manual checks
+
+1. Run `npm run preview` and manually verify the affected game variants still work correctly.
+2. If the data pipeline changed, confirm all five `src/data/*.json` files were regenerated and spot-check a few entries.
