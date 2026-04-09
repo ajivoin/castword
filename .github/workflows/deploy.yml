@@ -51,6 +51,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm test
+
       - run: npm run build
         env:
           VITE_BASE_PATH: /castword/
