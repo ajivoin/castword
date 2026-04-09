@@ -142,6 +142,22 @@ class TestIsPaperCard:
         card = {"set_type": "expansion", "layout": "contraption"}
         assert is_paper_card(card) is False
 
+    def test_token_layout_is_not_paper(self):
+        card = {"set_type": "expansion", "layout": "token"}
+        assert is_paper_card(card) is False
+
+    def test_double_faced_token_layout_is_not_paper(self):
+        card = {"set_type": "expansion", "layout": "double_faced_token"}
+        assert is_paper_card(card) is False
+
+    def test_emblem_layout_is_not_paper(self):
+        card = {"set_type": "expansion", "layout": "emblem"}
+        assert is_paper_card(card) is False
+
+    def test_art_series_layout_is_not_paper(self):
+        card = {"set_type": "expansion", "layout": "art_series"}
+        assert is_paper_card(card) is False
+
 
 # ── is_alchemy_card ───────────────────────────────────────────────────────────
 
@@ -168,6 +184,10 @@ class TestFilterCards:
             {"name": "A-Rebalance", "oracle_id": "2", "set_type": "expansion", "layout": "normal"},
             {"name": "Digital",     "oracle_id": "3", "set_type": "alchemy",   "layout": "normal"},
             {"name": "Sticker",     "oracle_id": "4", "set_type": "expansion", "layout": "sticker"},
+            {"name": "Token",       "oracle_id": "5", "set_type": "expansion", "layout": "token"},
+            {"name": "DFToken",     "oracle_id": "6", "set_type": "expansion", "layout": "double_faced_token"},
+            {"name": "Emblem",      "oracle_id": "7", "set_type": "expansion", "layout": "emblem"},
+            {"name": "ArtSeries",   "oracle_id": "8", "set_type": "expansion", "layout": "art_series"},
         ]
 
     def test_default_excludes_alchemy_and_digital(self):
@@ -178,6 +198,15 @@ class TestFilterCards:
         assert "A-Rebalance" not in names
         assert "Digital" not in names
         assert "Sticker" not in names
+
+    def test_default_excludes_non_card_layouts(self):
+        cards = self._make_cards()
+        result = filter_cards(cards, include_digital=False, include_alchemy=False)
+        names = {c["name"] for c in result}
+        assert "Token" not in names
+        assert "DFToken" not in names
+        assert "Emblem" not in names
+        assert "ArtSeries" not in names
 
     def test_include_alchemy_keeps_a_prefix(self):
         cards = self._make_cards()
