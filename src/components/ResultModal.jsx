@@ -79,8 +79,15 @@ export default function ResultModal({
 
         {/* Card reveal */}
         <div className="modal-card">
-          {card.image_url && (
-            <img className="card-image" src={card.image_url} alt={card.name} loading="lazy" />
+          {(card.image_url || card.image_url_back) && (
+            <div className="card-images">
+              {card.image_url && (
+                <img className="card-image" src={card.image_url} alt={card.name} loading="lazy" />
+              )}
+              {card.image_url_back && (
+                <img className="card-image" src={card.image_url_back} alt={`${card.name} (back)`} loading="lazy" />
+              )}
+            </div>
           )}
           <div className="card-details">
             <h2 className="card-name">{card.name}</h2>

@@ -45,6 +45,14 @@ def get_image_url(card: dict) -> str:
     return ""
 
 
+def get_image_url_back(card: dict) -> str:
+    """Return the back-face image URL for double-sided cards, or empty string."""
+    faces = card.get("card_faces", [])
+    if len(faces) >= 2 and "image_uris" in faces[1]:
+        return faces[1]["image_uris"].get("normal", "")
+    return ""
+
+
 def get_oracle_text(card: dict) -> str:
     """Return combined oracle text, handling multi-face cards."""
     if "oracle_text" in card:
@@ -105,6 +113,7 @@ def main():
             "oracle_text": get_oracle_text(card),
             "flavor_text": get_flavor_text(card),
             "image_url": get_image_url(card),
+            "image_url_back": get_image_url_back(card),
         }
 
     # ── Normal game data (oracle-text unique words, mainline sets only) ──────
@@ -133,6 +142,7 @@ def main():
             "colors": extra.get("colors", []),
             "oracle_text": extra.get("oracle_text", ""),
             "image_url": extra.get("image_url", ""),
+            "image_url_back": extra.get("image_url_back", ""),
             "unique_words": entry["unique_words"],
         })
 
@@ -165,6 +175,7 @@ def main():
             "oracle_text": extra.get("oracle_text", ""),
             "flavor_text": extra.get("flavor_text", ""),
             "image_url": extra.get("image_url", ""),
+            "image_url_back": extra.get("image_url_back", ""),
             "unique_words": exclusive,
         })
     flavor_data.sort(key=lambda r: r["name"])
@@ -193,6 +204,7 @@ def main():
             "oracle_text": extra.get("oracle_text", ""),
             "flavor_text": extra.get("flavor_text", ""),
             "image_url": extra.get("image_url", ""),
+            "image_url_back": extra.get("image_url_back", ""),
             "unique_words": entry["unique_words"],
         })
     print(f"  {len(wildcard_data):,} wildcard puzzle cards found.", file=sys.stderr)
@@ -234,17 +246,18 @@ def main():
         oid   = entry["oracle_id"]
         extra = lookup.get(oid, {})
         easy_data.append({
-            "name":         entry["name"],
-            "oracle_id":    oid,
-            "scryfall_uri": entry["scryfall_uri"],
-            "type_line":    entry["type_line"],
-            "mana_cost":    extra.get("mana_cost", ""),
-            "colors":       extra.get("colors", []),
-            "oracle_text":  extra.get("oracle_text", ""),
-            "flavor_text":  extra.get("flavor_text", ""),
-            "image_url":    extra.get("image_url", ""),
-            "unique_words": entry["unique_words"],
-            "edhrec_rank":  card_lookup[oid].get("edhrec_rank") if oid in card_lookup else None,
+            "name":           entry["name"],
+            "oracle_id":      oid,
+            "scryfall_uri":   entry["scryfall_uri"],
+            "type_line":      entry["type_line"],
+            "mana_cost":      extra.get("mana_cost", ""),
+            "colors":         extra.get("colors", []),
+            "oracle_text":    extra.get("oracle_text", ""),
+            "flavor_text":    extra.get("flavor_text", ""),
+            "image_url":      extra.get("image_url", ""),
+            "image_url_back": extra.get("image_url_back", ""),
+            "unique_words":   entry["unique_words"],
+            "edhrec_rank":    card_lookup[oid].get("edhrec_rank") if oid in card_lookup else None,
         })
 
     # All card names for autocomplete
