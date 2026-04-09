@@ -153,13 +153,16 @@ def get_text_blocks(card: dict, include_flavor: bool, exclude_reminder: bool) ->
 
 DIGITAL_SET_TYPES = {"alchemy", "memorabilia"}
 DIGITAL_LAYOUTS   = {"attraction", "sticker", "contraption"}
+NON_CARD_LAYOUTS  = {"token", "double_faced_token", "emblem", "art_series"}
 
 
 def is_paper_card(card: dict) -> bool:
-    """Return True if the card is a paper-legal card (not Alchemy or digital-only)."""
+    """Return True if the card is a paper-legal card (not Alchemy, digital-only, or a non-card)."""
     if card.get("set_type") in DIGITAL_SET_TYPES:
         return False
     if card.get("layout") in DIGITAL_LAYOUTS:
+        return False
+    if card.get("layout") in NON_CARD_LAYOUTS:
         return False
     return True
 
