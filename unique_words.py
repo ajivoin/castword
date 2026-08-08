@@ -19,6 +19,7 @@ Options:
 """
 
 import argparse
+import gzip
 import json
 import re
 import sys
@@ -38,13 +39,26 @@ HEADERS = {"User-Agent": "MTGUniqueWords/1.0", "Accept": "application/json"}
 
 
 def fetch_bulk_download_url() -> str:
-    """Resolve the latest oracle-cards bulk download URL from the Scryfall API."""
+    """Resolve the latest oracle-cards bulk download URL from the Scryfall API.
+
+    Scryfall used to expose a `download_uri` on the oracle_cards entry
+    pointing at a plain JSON array. That field has since been removed in
+    favor of `jsonl_download_uri`, a gzip-compressed JSON Lines file. Prefer
+    the plain-JSON field when present (in case it ever returns), and fall
+    back to the JSON Lines download otherwise — download_bulk_file() knows
+    how to decompress and convert either.
+    """
     req = urllib.request.Request(BULK_DATA_API, headers=HEADERS)
     with urllib.request.urlopen(req) as resp:
         data = json.loads(resp.read())
     for entry in data["data"]:
         if entry["type"] == "oracle_cards":
-            return entry["download_uri"]
+            url = entry.get("download_uri") or entry.get("jsonl_download_uri")
+            if url:
+                return url
+            raise RuntimeError(
+                "oracle_cards entry has neither download_uri nor jsonl_download_uri."
+            )
     raise RuntimeError("Could not find oracle_cards entry in Scryfall bulk-data response.")
 
 
@@ -70,6 +84,17 @@ def download_bulk_file(dest: Path) -> None:
                     print(f"\r  {downloaded/1_000_000:.1f} / {total/1_000_000:.1f} MB ({pct:.0f}%)",
                           end="", file=sys.stderr)
             print(file=sys.stderr)
+
+        if url.endswith(".gz"):
+            # Scryfall's bulk downloads are gzip-compressed JSON Lines (one
+            # card object per line) rather than a plain JSON array. Convert
+            # to a JSON array on disk so downstream code can json.load() it.
+            print("Decompressing and converting JSON Lines to a JSON array...", file=sys.stderr)
+            with gzip.open(tmp, "rt", encoding="utf-8") as f_in:
+                cards = [json.loads(line) for line in f_in if line.strip()]
+            with open(tmp, "w", encoding="utf-8") as f_out:
+                json.dump(cards, f_out)
+
         tmp.rename(dest)
         print(f"Saved to {dest}", file=sys.stderr)
     except Exception:

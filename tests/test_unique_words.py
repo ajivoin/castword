@@ -1,6 +1,12 @@
 """Tests for unique_words.py — word analysis functions."""
+import gzip
+import json
 import sys
+from io import BytesIO
 from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -14,6 +20,8 @@ from unique_words import (
     filter_cards,
     build_word_card_map,
     find_unique_word_cards,
+    fetch_bulk_download_url,
+    download_bulk_file,
 )
 
 
@@ -356,3 +364,96 @@ class TestFindUniqueWordCards:
         results = find_unique_word_cards(word_to_cards, meta)
         assert results[0]["name"] == "Alpaca"
         assert results[1]["name"] == "Zebra"
+
+
+# ── bulk data download ──────────────────────────────────────────────────────
+
+class FakeResponse:
+    """Minimal stand-in for the object returned by urllib.request.urlopen."""
+
+    def __init__(self, data: bytes):
+        self._buf = BytesIO(data)
+        self.headers = {"Content-Length": str(len(data))}
+
+    def read(self, size=-1):
+        return self._buf.read(size)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def _bulk_data_listing(oracle_cards_entry):
+    payload = {
+        "object": "list",
+        "data": [
+            {"object": "bulk_data", "type": "default_cards", "download_uri": "https://example.com/default.json"},
+            {"object": "bulk_data", "type": "oracle_cards", **oracle_cards_entry},
+        ],
+    }
+    return FakeResponse(json.dumps(payload).encode("utf-8"))
+
+
+class TestFetchBulkDownloadUrl:
+    def test_prefers_plain_download_uri_when_present(self):
+        with patch("unique_words.urllib.request.urlopen", return_value=_bulk_data_listing({
+            "download_uri": "https://data.scryfall.io/oracle-cards/oracle-cards.json",
+            "jsonl_download_uri": "https://data.scryfall.io/oracle-cards/oracle-cards.jsonl.gz",
+        })):
+            assert fetch_bulk_download_url() == "https://data.scryfall.io/oracle-cards/oracle-cards.json"
+
+    def test_falls_back_to_jsonl_download_uri(self):
+        # Scryfall has removed `download_uri` from the oracle_cards bulk-data
+        # entry, leaving only the gzip-compressed JSON Lines download.
+        with patch("unique_words.urllib.request.urlopen", return_value=_bulk_data_listing({
+            "jsonl_download_uri": "https://data.scryfall.io/oracle-cards/oracle-cards.jsonl.gz",
+        })):
+            assert fetch_bulk_download_url() == "https://data.scryfall.io/oracle-cards/oracle-cards.jsonl.gz"
+
+    def test_raises_when_oracle_cards_entry_has_no_known_uri(self):
+        with patch("unique_words.urllib.request.urlopen", return_value=_bulk_data_listing({})):
+            with pytest.raises(RuntimeError):
+                fetch_bulk_download_url()
+
+    def test_raises_when_oracle_cards_entry_missing(self):
+        payload = {"object": "list", "data": [{"object": "bulk_data", "type": "default_cards", "download_uri": "x"}]}
+        with patch("unique_words.urllib.request.urlopen", return_value=FakeResponse(json.dumps(payload).encode("utf-8"))):
+            with pytest.raises(RuntimeError):
+                fetch_bulk_download_url()
+
+
+class TestDownloadBulkFile:
+    def test_converts_gzip_jsonl_download_to_json_array(self, tmp_path):
+        cards = [
+            {"name": "Alpha", "oracle_id": "oid-1"},
+            {"name": "Beta", "oracle_id": "oid-2"},
+        ]
+        jsonl_bytes = "\n".join(json.dumps(c) for c in cards).encode("utf-8")
+        gz_bytes = gzip.compress(jsonl_bytes)
+        dest = tmp_path / "oracle-cards.json"
+
+        with patch("unique_words.fetch_bulk_download_url",
+                   return_value="https://data.scryfall.io/oracle-cards/oracle-cards.jsonl.gz"), \
+             patch("unique_words.urllib.request.urlopen", return_value=FakeResponse(gz_bytes)):
+            download_bulk_file(dest)
+
+        assert dest.exists()
+        with open(dest, encoding="utf-8") as f:
+            saved = json.load(f)
+        assert saved == cards
+
+    def test_writes_plain_json_download_unchanged(self, tmp_path):
+        cards = [{"name": "Alpha", "oracle_id": "oid-1"}]
+        json_bytes = json.dumps(cards).encode("utf-8")
+        dest = tmp_path / "oracle-cards.json"
+
+        with patch("unique_words.fetch_bulk_download_url",
+                   return_value="https://data.scryfall.io/oracle-cards/oracle-cards.json"), \
+             patch("unique_words.urllib.request.urlopen", return_value=FakeResponse(json_bytes)):
+            download_bulk_file(dest)
+
+        with open(dest, encoding="utf-8") as f:
+            saved = json.load(f)
+        assert saved == cards
