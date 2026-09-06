@@ -21,10 +21,10 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # ── Data prep ────────────────────────────────────────────────────────────
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -34,7 +34,7 @@ jobs:
         run: echo "value=$(date -u +%Y-W%V)" >> "$GITHUB_OUTPUT"
 
       - name: Cache Scryfall bulk data
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: oracle-cards.json
           key: scryfall-${{ steps.week.outputs.value }}
@@ -44,9 +44,9 @@ jobs:
         run: python prepare_data.py
 
       # ── Build ────────────────────────────────────────────────────────────────
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - run: npm ci
@@ -58,11 +58,11 @@ jobs:
           VITE_BASE_PATH: /castword/
 
       # ── Deploy ───────────────────────────────────────────────────────────────
-      - uses: actions/configure-pages@v4
+      - uses: actions/configure-pages@v6
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
