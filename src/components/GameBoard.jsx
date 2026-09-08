@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import HintPanel from './HintPanel.jsx'
 import GuessInput from './GuessInput.jsx'
 import ResultModal from './ResultModal.jsx'
-
-const HINT_EMOJIS = ['🟨', '🟧', '🟥', '🟫', '⬛']
+import { HINT_EMOJIS } from '../hooks/useGame.js'
 
 export default function GameBoard({ mode, variant, streak, gameState, onGuess, onSkip, onPlayAgain, onAdvance, maxGuesses, nextVariant, allRoundsComplete, campaign }) {
   const { card, hintsRevealed, guesses, status } = gameState
@@ -32,7 +31,7 @@ export default function GameBoard({ mode, variant, streak, gameState, onGuess, o
               disabled={done}
               pastGuesses={guesses}
             />
-            {(hintsRevealed < 4 || guesses.length === maxGuesses - 1) && (
+            {(hintsRevealed < 5 || guesses.length === maxGuesses - 1) && (
               <button
                 className={guesses.length === maxGuesses - 1 ? 'btn-give-up' : 'btn-skip'}
                 onClick={onSkip}
