@@ -39,6 +39,17 @@ jobs:
           path: oracle-cards.json
           key: scryfall-${{ steps.week.outputs.value }}
 
+      - name: Cache first-printing lookups
+        uses: actions/cache@v6
+        with:
+          path: first-printing-cache.json
+          key: first-printing-${{ github.run_id }}
+          restore-keys: |
+            first-printing-
+
+      - name: Fetch first-printing data
+        run: python fetch_first_printing.py
+
       # If cache missed, prepare_data.py downloads oracle-cards.json automatically
       - name: Generate game data
         run: python prepare_data.py
