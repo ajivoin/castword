@@ -1,7 +1,5 @@
 import { useEffect } from 'react'
-import { VARIANT_SEQUENCE, VARIANT_LABELS, VARIANT_TO_HASH } from '../hooks/useGame.js'
-
-const HINT_EMOJIS = ['🟨', '🟧', '🟥', '🟫', '⬛']
+import { VARIANT_SEQUENCE, VARIANT_LABELS, VARIANT_TO_HASH, HINT_EMOJIS } from '../hooks/useGame.js'
 
 export function guessEmojis(guesses) {
   return guesses.map((g, i) => g.correct ? '🟩' : g.skipped ? '⬜' : HINT_EMOJIS[Math.min(i, HINT_EMOJIS.length - 1)]).join('')

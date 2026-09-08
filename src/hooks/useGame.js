@@ -4,12 +4,13 @@ import flavorData from '../data/flavor-data.json'
 import wildcardData from '../data/wildcard-data.json'
 import easyData from '../data/easy-data.json'
 
-const MAX_GUESSES = 5
+const MAX_GUESSES = 6
 
 const DATA = { easy: easyData, normal: gameData, bonus: flavorData, wildcard: wildcardData }
 
 export const VARIANT_SEQUENCE = ['normal', 'bonus', 'wildcard']
 export const VARIANT_LABELS   = { easy: 'Easy ★', normal: 'Oracle', bonus: 'Flavor ✦', wildcard: 'Wildcard 🃏' }
+export const HINT_EMOJIS = ['🟨', '🟧', '🟥', '🟫', '🟪', '⬛']
 
 // Variants with no cards (data not yet generated) are unavailable
 export const VARIANT_AVAILABLE = Object.fromEntries(
@@ -193,7 +194,7 @@ export function useGame() {
 
       const correct   = guessName.toLowerCase() === prev.card.name.toLowerCase()
       const newGuesses = [...prev.guesses, { value: guessName, correct }]
-      const newHints   = correct ? prev.hintsRevealed : Math.min(prev.hintsRevealed + 1, 4)
+      const newHints   = correct ? prev.hintsRevealed : Math.min(prev.hintsRevealed + 1, 5)
       const lost       = !correct && newGuesses.length >= MAX_GUESSES
       const status     = correct ? 'won' : lost ? 'lost' : 'playing'
 
@@ -209,7 +210,7 @@ export function useGame() {
       if (prev.status !== 'playing') return prev
 
       const newGuesses = [...prev.guesses, { skipped: true }]
-      const newHints   = Math.min(prev.hintsRevealed + 1, 4)
+      const newHints   = Math.min(prev.hintsRevealed + 1, 5)
       const lost       = newGuesses.length >= MAX_GUESSES
       const status     = lost ? 'lost' : 'playing'
 

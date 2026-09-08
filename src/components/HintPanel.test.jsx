@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import HintPanel, { censorPatterns, renderText, symClass } from './HintPanel.jsx'
+import HintPanel, { censorPatterns, renderText, symClass, formatFirstPrinted } from './HintPanel.jsx'
 import { CARD_COUNTERSPELL } from '../test/fixtures.js'
 
 // ── censorPatterns ────────────────────────────────────────────────────────────
@@ -154,15 +154,26 @@ describe('HintPanel component', () => {
     expect(screen.getByText('Instant')).toBeInTheDocument()
   })
 
-  it('shows card text label at hintsRevealed 3', () => {
+  it('shows first printed label at hintsRevealed 3', () => {
     render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={3} status="playing" variant="normal" />)
+    expect(screen.getByText('First printed')).toBeInTheDocument()
+  })
+
+  it('shows card text label at hintsRevealed 4', () => {
+    render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={4} status="playing" variant="normal" />)
     expect(screen.getByText('Card text')).toBeInTheDocument()
+  })
+
+  it('shows flavor text label at hintsRevealed 5', () => {
+    render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={5} status="playing" variant="normal" />)
+    expect(screen.getByText('Flavor text')).toBeInTheDocument()
   })
 
   it('shows all hints when status is won', () => {
     render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={0} status="won" variant="normal" />)
     expect(screen.getByText('Mana cost')).toBeInTheDocument()
     expect(screen.getByText('Type')).toBeInTheDocument()
+    expect(screen.getByText('First printed')).toBeInTheDocument()
     expect(screen.getByText('Card text')).toBeInTheDocument()
     expect(screen.getByText('Flavor text')).toBeInTheDocument()
   })
@@ -175,5 +186,46 @@ describe('HintPanel component', () => {
   it('normal variant shows "Unique word(s)" label', () => {
     render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={0} status="playing" variant="normal" />)
     expect(screen.getByText('Unique word(s)')).toBeInTheDocument()
+  })
+})
+
+// ── formatFirstPrinted ────────────────────────────────────────────────────────
+
+describe('formatFirstPrinted', () => {
+  it('returns "Name (Year)" when both fields are present', () => {
+    const card = { name: 'Counterspell', first_set_name: 'Limited Edition Alpha', first_printed_year: '1993' }
+    expect(formatFirstPrinted(card)).toBe('Limited Edition Alpha (1993)')
+  })
+
+  it('returns just the name when year is missing', () => {
+    const card = { name: 'Counterspell', first_set_name: 'Limited Edition Alpha', first_printed_year: '' }
+    expect(formatFirstPrinted(card)).toBe('Limited Edition Alpha')
+  })
+
+  it('returns "—" when name is missing', () => {
+    const card = { name: 'Counterspell', first_set_name: '', first_printed_year: '1993' }
+    expect(formatFirstPrinted(card)).toBe('—')
+  })
+
+  it('returns "—" when both fields are undefined (old-shaped card object)', () => {
+    const card = { name: 'Counterspell' }
+    expect(formatFirstPrinted(card)).toBe('—')
+  })
+})
+
+// ── first_printed spoiler redaction ──────────────────────────────────────────
+
+describe('first_printed spoiler redaction', () => {
+  it('redacts the hint value when the set name equals the card name', () => {
+    const card = {
+      ...CARD_COUNTERSPELL,
+      name: 'Kamigawa',
+      first_set_name: 'Kamigawa',
+      first_printed_year: '2004',
+    }
+    render(<HintPanel card={card} hintsRevealed={3} status="playing" variant="normal" />)
+    const hintPanel = screen.getByText('First printed').closest('.hint-row')
+    expect(hintPanel.textContent).not.toContain('Kamigawa')
+    expect(hintPanel.querySelector('.redacted')).toBeTruthy()
   })
 })
