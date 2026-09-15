@@ -39,18 +39,15 @@ jobs:
           path: oracle-cards.json
           key: scryfall-${{ steps.week.outputs.value }}
 
-      - name: Cache first-printing lookups
+      # Cache the default-cards bulk file (every printing of every card);
+      # refresh weekly alongside oracle-cards
+      - name: Cache Scryfall default-cards data
         uses: actions/cache@v6
         with:
-          path: first-printing-cache.json
-          key: first-printing-${{ github.run_id }}
-          restore-keys: |
-            first-printing-
+          path: default-cards.jsonl.gz
+          key: default-cards-${{ steps.week.outputs.value }}
 
-      - name: Fetch first-printing data
-        run: python fetch_first_printing.py
-
-      # If cache missed, prepare_data.py downloads oracle-cards.json automatically
+      # If either cache missed, prepare_data.py downloads the bulk files automatically
       - name: Generate game data
         run: python prepare_data.py
 

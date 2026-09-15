@@ -65,9 +65,9 @@ npm run preview  # preview the production build locally
 
 `fetch_edhrec.py` — fetches and caches EDHRec deck-inclusion counts used to filter the Easy mode card pool.
 
-`fetch_first_printing.py` — fetches and caches each card's first paper printing (set name and year) used for the "First printed in" hint.
+`first_printings.py` — derives each card's first paper printing (set name and year) for the "First printed in" hint from Scryfall's `default-cards` bulk file, which contains every printing of every card. (The `oracle-cards` dump used elsewhere carries only each card's *most recent* printing.)
 
-`prepare_data.py` calls into both and produces five game datasets:
+`prepare_data.py` calls into all three and produces five game datasets:
 
 | File | Description |
 |------|-------------|

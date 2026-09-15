@@ -27,9 +27,10 @@ from unique_words import (
     tokenize,
     download_bulk_file,
 )
+from first_printings import ensure_default_cards, load_first_printings
 
 BULK_FILE         = Path(__file__).parent / "oracle-cards.json"
-FIRST_PRINT_CACHE = Path(__file__).parent / "first-printing-cache.json"
+DEFAULT_CARDS     = Path(__file__).parent / "default-cards.jsonl.gz"
 OUT_DIR           = Path(__file__).parent / "src" / "data"
 
 MIN_WORD_LEN      = 3
@@ -89,7 +90,7 @@ def get_flavor_text(card: dict) -> str:
 
 def first_printed_fields(entry: dict | None) -> dict:
     """
-    Convert one first-printing-cache.json entry (or None) into the
+    Convert one first-printings entry (or None) into the
     first_set_name/first_printed_year fields threaded into the output
     datasets. Never raises on a malformed entry — blank fields instead.
     """
@@ -144,16 +145,12 @@ def main():
     filtered = filter_cards(all_cards, include_digital=False, include_alchemy=False)
     print(f"  {len(filtered):,} cards after filtering.", file=sys.stderr)
 
-    # First-printing enrichment (set/year a card was originally released in).
-    # Produced separately by fetch_first_printing.py; optional — the pipeline
-    # must still complete successfully (with blank fields) if it's missing.
-    if FIRST_PRINT_CACHE.exists():
-        with open(FIRST_PRINT_CACHE, encoding="utf-8") as f:
-            first_print_cache: dict = json.load(f)
-        print(f"  First-printing cache: {len(first_print_cache):,} entries loaded from {FIRST_PRINT_CACHE}", file=sys.stderr)
-    else:
-        print(f"  {FIRST_PRINT_CACHE} not found — 'first printed' hint will be blank for all cards.", file=sys.stderr)
-        first_print_cache = {}
+    # First-printing enrichment (set/year a card was originally released in),
+    # derived from the default-cards bulk file — which, unlike oracle-cards,
+    # holds every printing of every card. Downloaded on demand like the
+    # oracle-cards dump above.
+    first_printings = load_first_printings(ensure_default_cards(DEFAULT_CARDS))
+    print(f"  First printings: {len(first_printings):,} cards with a dated paper printing.", file=sys.stderr)
 
     # Build enrichment lookup: oracle_id -> extra fields
     card_lookup: dict[str, dict] = {c["oracle_id"]: c for c in filtered if c.get("oracle_id")}
@@ -166,7 +163,7 @@ def main():
             "flavor_text": get_flavor_text(card),
             "image_url": get_image_url(card),
             "image_url_back": get_image_url_back(card),
-            **first_printed_fields(first_print_cache.get(oid)),
+            **first_printed_fields(first_printings.get(oid)),
         }
 
     # ── Normal game data (oracle-text unique words, mainline sets only) ──────
