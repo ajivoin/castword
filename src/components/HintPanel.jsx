@@ -51,9 +51,9 @@ export function symClass(sym) {
 
 // Cards that never saw a paper printing are tagged with the platform they
 // debuted on (Arena, Magic Online, ...). Paper is recorded explicitly in the
-// data so "no platform" never has to be inferred from a blank, but it is the
-// unremarkable case and is never shown.
-const UNSHOWN_PLATFORM = 'Paper'
+// data so "no platform" never has to be inferred from a blank; it is listed
+// here because it is the unremarkable case, not because it is unknown.
+const HIDDEN_PLATFORMS = new Set(['Paper'])
 
 // Formats the "first printed" hint value from a card's first-printing fields.
 // Defensive on undefined fields (older cached data may lack them entirely).
@@ -64,7 +64,7 @@ export function formatFirstPrinted(card) {
   if (!name) return '—'
 
   const printing = year ? `${name} (${year})` : name
-  return platform && platform !== UNSHOWN_PLATFORM ? `${printing} · ${platform}` : printing
+  return platform && !HIDDEN_PLATFORMS.has(platform) ? `${printing} · ${platform}` : printing
 }
 
 // Renders a mana cost string like "{2}{U}{U}" using mana-font icons
