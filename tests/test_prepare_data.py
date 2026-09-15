@@ -10,6 +10,7 @@ from prepare_data import (
     get_oracle_text,
     get_flavor_text,
     flavor_exclusive_words,
+    first_printed_fields,
     DOUBLE_FACED_LAYOUTS,
 )
 
@@ -197,3 +198,57 @@ class TestFlavorExclusiveWords:
         }
         result = flavor_exclusive_words(card, ["exclusive"])
         assert "exclusive" in result
+
+
+# ── first_printed_fields ──────────────────────────────────────────────────────
+
+class TestFirstPrintedFields:
+    def test_full_cache_hit(self):
+        entry = {"set_name": "Limited Edition Alpha", "released_at": "1993-08-05"}
+        assert first_printed_fields(entry) == {
+            "first_set_name": "Limited Edition Alpha",
+            "first_printed_year": "1993",
+        }
+
+    def test_cache_entry_is_none(self):
+        assert first_printed_fields(None) == {"first_set_name": "", "first_printed_year": ""}
+
+    def test_oracle_id_absent_from_cache_entirely(self):
+        # Simulates cache.get(oid) returning None because the key isn't present.
+        cache = {}
+        assert first_printed_fields(cache.get("missing-oid")) == {
+            "first_set_name": "",
+            "first_printed_year": "",
+        }
+
+    def test_empty_released_at(self):
+        entry = {"set_name": "Alpha", "released_at": ""}
+        assert first_printed_fields(entry) == {"first_set_name": "Alpha", "first_printed_year": ""}
+
+    def test_none_released_at(self):
+        entry = {"set_name": "Alpha", "released_at": None}
+        assert first_printed_fields(entry) == {"first_set_name": "Alpha", "first_printed_year": ""}
+
+    def test_non_date_garbage_released_at(self):
+        entry = {"set_name": "Alpha", "released_at": "not-a-date"}
+        assert first_printed_fields(entry) == {"first_set_name": "Alpha", "first_printed_year": ""}
+
+    def test_released_at_too_short(self):
+        entry = {"set_name": "Alpha", "released_at": "19"}
+        assert first_printed_fields(entry) == {"first_set_name": "Alpha", "first_printed_year": ""}
+
+    def test_well_formed_released_at_extracts_year(self):
+        entry = {"set_name": "Kamigawa: Neon Dynasty", "released_at": "2022-02-18"}
+        assert first_printed_fields(entry)["first_printed_year"] == "2022"
+
+    def test_missing_set_name_key(self):
+        entry = {"released_at": "2022-02-18"}
+        assert first_printed_fields(entry) == {"first_set_name": "", "first_printed_year": "2022"}
+
+    def test_malformed_entry_non_dict_does_not_crash(self):
+        assert first_printed_fields("garbage") == {"first_set_name": "", "first_printed_year": ""}
+        assert first_printed_fields(42) == {"first_set_name": "", "first_printed_year": ""}
+        assert first_printed_fields([]) == {"first_set_name": "", "first_printed_year": ""}
+
+    def test_empty_dict_entry(self):
+        assert first_printed_fields({}) == {"first_set_name": "", "first_printed_year": ""}

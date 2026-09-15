@@ -111,9 +111,9 @@ describe('initial state', () => {
     expect(result.current.gameState.hintsRevealed).toBe(0)
   })
 
-  it('exposes maxGuesses of 5', () => {
+  it('exposes maxGuesses of 6', () => {
     const { result } = renderHook(() => useGame())
-    expect(result.current.maxGuesses).toBe(5)
+    expect(result.current.maxGuesses).toBe(6)
   })
 })
 
@@ -168,17 +168,17 @@ describe('submitGuess', () => {
     expect(result.current.streak).toBe(0)
   })
 
-  it('5th wrong guess sets status to lost', () => {
+  it('6th wrong guess sets status to lost', () => {
     const { result } = renderHook(() => useGame())
     act(() => {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         result.current.submitGuess('Wrong Card ' + i)
       }
     })
     expect(result.current.gameState.status).toBe('lost')
   })
 
-  it('5th wrong guess resets streak to 0', () => {
+  it('6th wrong guess resets streak to 0', () => {
     const { result } = renderHook(() => useGame())
     // first win a game to build streak
     const cardName = result.current.gameState.card.name
@@ -187,7 +187,7 @@ describe('submitGuess', () => {
     // switch to infinite and lose
     act(() => { result.current.switchMode('infinite', 'normal') })
     act(() => {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         result.current.submitGuess('Wrong Card ' + i)
       }
     })
@@ -203,14 +203,14 @@ describe('submitGuess', () => {
     expect(result.current.gameState).toEqual(stateAfterWin)
   })
 
-  it('hintsRevealed is capped at 4 regardless of additional wrong guesses', () => {
+  it('hintsRevealed is capped at 5 regardless of additional wrong guesses', () => {
     const { result } = renderHook(() => useGame())
     act(() => {
       for (let i = 0; i < 10; i++) {
         result.current.submitGuess('Wrong Card ' + i)
       }
     })
-    expect(result.current.gameState.hintsRevealed).toBe(4)
+    expect(result.current.gameState.hintsRevealed).toBe(5)
   })
 })
 
@@ -236,17 +236,17 @@ describe('skipTurn', () => {
     expect(result.current.gameState.status).toBe('playing')
   })
 
-  it('5 skips result in lost status', () => {
+  it('6 skips result in lost status', () => {
     const { result } = renderHook(() => useGame())
     act(() => {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         result.current.skipTurn()
       }
     })
     expect(result.current.gameState.status).toBe('lost')
   })
 
-  it('5 skips reset streak to 0', () => {
+  it('6 skips reset streak to 0', () => {
     const { result } = renderHook(() => useGame())
     // switch to infinite for streak tracking
     act(() => { result.current.switchMode('infinite', 'normal') })
@@ -255,7 +255,7 @@ describe('skipTurn', () => {
     expect(result.current.streak).toBe(1)
     act(() => { result.current.newGame() })
     act(() => {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         result.current.skipTurn()
       }
     })

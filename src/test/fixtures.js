@@ -10,6 +10,8 @@ export const CARD_COUNTERSPELL = {
   image_url: 'https://cards.scryfall.io/normal/front/a/0/a06a42b0-e.jpg',
   image_url_back: '',
   unique_words: ['counterspell'],
+  first_set_name: 'Limited Edition Beta',
+  first_printed_year: '1993',
 }
 
 export const CARD_LIGHTNING_BOLT = {
@@ -24,6 +26,8 @@ export const CARD_LIGHTNING_BOLT = {
   image_url: 'https://cards.scryfall.io/normal/front/l/b/lb0f-e.jpg',
   image_url_back: '',
   unique_words: ['bolt'],
+  first_set_name: 'Limited Edition Alpha',
+  first_printed_year: '1993',
 }
 
 export const CARD_POOL = [CARD_COUNTERSPELL, CARD_LIGHTNING_BOLT]

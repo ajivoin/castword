@@ -49,6 +49,15 @@ export function symClass(sym) {
   return sym.toLowerCase().replace('/', '')
 }
 
+// Formats the "first printed" hint value from a card's first-printing fields.
+// Defensive on undefined fields (older cached data may lack them entirely).
+export function formatFirstPrinted(card) {
+  const name = card.first_set_name ?? ''
+  const year = card.first_printed_year ?? ''
+  if (!name) return '—'
+  return year ? `${name} (${year})` : name
+}
+
 // Renders a mana cost string like "{2}{U}{U}" using mana-font icons
 function ManaCost({ cost }) {
   if (!cost) return <span className="mana-cost">—</span>
@@ -65,27 +74,30 @@ function ManaCost({ cost }) {
 }
 
 const HINT_DEFS_NORMAL = [
-  { id: 'words',  label: 'Unique word(s)' },
-  { id: 'cost',   label: 'Mana cost' },
-  { id: 'type',   label: 'Type' },
-  { id: 'text',   label: 'Card text' },
-  { id: 'flavor', label: 'Flavor text' },
+  { id: 'words',         label: 'Unique word(s)' },
+  { id: 'cost',          label: 'Mana cost' },
+  { id: 'type',          label: 'Type' },
+  { id: 'first_printed', label: 'First printed' },
+  { id: 'text',          label: 'Card text' },
+  { id: 'flavor',        label: 'Flavor text' },
 ]
 
 const HINT_DEFS_BONUS = [
-  { id: 'words',  label: 'Unique flavor word(s)' },
-  { id: 'cost',   label: 'Mana cost' },
-  { id: 'type',   label: 'Type' },
-  { id: 'text',   label: 'Card text' },
-  { id: 'flavor', label: 'Flavor text' },
+  { id: 'words',         label: 'Unique flavor word(s)' },
+  { id: 'cost',          label: 'Mana cost' },
+  { id: 'type',          label: 'Type' },
+  { id: 'first_printed', label: 'First printed' },
+  { id: 'text',          label: 'Card text' },
+  { id: 'flavor',        label: 'Flavor text' },
 ]
 
 const HINT_DEFS_WILDCARD = [
-  { id: 'words',  label: 'Unique word(s)' },
-  { id: 'cost',   label: 'Mana cost' },
-  { id: 'type',   label: 'Type' },
-  { id: 'text',   label: 'Card text' },
-  { id: 'flavor', label: 'Flavor text' },
+  { id: 'words',         label: 'Unique word(s)' },
+  { id: 'cost',          label: 'Mana cost' },
+  { id: 'type',          label: 'Type' },
+  { id: 'first_printed', label: 'First printed' },
+  { id: 'text',          label: 'Card text' },
+  { id: 'flavor',        label: 'Flavor text' },
 ]
 
 const HINT_DEFS = { normal: HINT_DEFS_NORMAL, bonus: HINT_DEFS_BONUS, wildcard: HINT_DEFS_WILDCARD }
@@ -109,6 +121,11 @@ export default function HintPanel({ card, hintsRevealed, status, variant = 'norm
             )}
             {id === 'type' && card.type_line}
             {id === 'cost' && <ManaCost cost={card.mana_cost} />}
+            {id === 'first_printed' && (
+              <span className="oracle-text">
+                {renderText(formatFirstPrinted(card), [], card.name)}
+              </span>
+            )}
             {id === 'text' && (
               <span className="oracle-text">
                 {renderText(card.oracle_text, card.unique_words, card.name)}

@@ -28,8 +28,9 @@ from unique_words import (
     download_bulk_file,
 )
 
-BULK_FILE = Path(__file__).parent / "oracle-cards.json"
-OUT_DIR   = Path(__file__).parent / "src" / "data"
+BULK_FILE         = Path(__file__).parent / "oracle-cards.json"
+FIRST_PRINT_CACHE = Path(__file__).parent / "first-printing-cache.json"
+OUT_DIR           = Path(__file__).parent / "src" / "data"
 
 MIN_WORD_LEN      = 3
 EASY_TOP_FRACTION = 0.33  # keep cards in the top N% by EDHRec rank
@@ -86,6 +87,29 @@ def get_flavor_text(card: dict) -> str:
     return "\n//\n".join(parts)
 
 
+def first_printed_fields(entry: dict | None) -> dict:
+    """
+    Convert one first-printing-cache.json entry (or None) into the
+    first_set_name/first_printed_year fields threaded into the output
+    datasets. Never raises on a malformed entry — blank fields instead.
+    """
+    if not isinstance(entry, dict):
+        return {"first_set_name": "", "first_printed_year": ""}
+
+    set_name = entry.get("set_name") or ""
+    if not isinstance(set_name, str):
+        set_name = ""
+
+    released_at = entry.get("released_at") or ""
+    year = ""
+    if isinstance(released_at, str) and len(released_at) >= 4:
+        candidate = released_at[:4]
+        if candidate.isdigit():
+            year = candidate
+
+    return {"first_set_name": set_name, "first_printed_year": year}
+
+
 def flavor_exclusive_words(card: dict, unique_words: list[str]) -> list[str]:
     """Return the subset of unique_words that appear in flavor text but NOT in oracle text."""
     faces = card.get("card_faces") or [card]
@@ -120,6 +144,17 @@ def main():
     filtered = filter_cards(all_cards, include_digital=False, include_alchemy=False)
     print(f"  {len(filtered):,} cards after filtering.", file=sys.stderr)
 
+    # First-printing enrichment (set/year a card was originally released in).
+    # Produced separately by fetch_first_printing.py; optional — the pipeline
+    # must still complete successfully (with blank fields) if it's missing.
+    if FIRST_PRINT_CACHE.exists():
+        with open(FIRST_PRINT_CACHE, encoding="utf-8") as f:
+            first_print_cache: dict = json.load(f)
+        print(f"  First-printing cache: {len(first_print_cache):,} entries loaded from {FIRST_PRINT_CACHE}", file=sys.stderr)
+    else:
+        print(f"  {FIRST_PRINT_CACHE} not found — 'first printed' hint will be blank for all cards.", file=sys.stderr)
+        first_print_cache = {}
+
     # Build enrichment lookup: oracle_id -> extra fields
     card_lookup: dict[str, dict] = {c["oracle_id"]: c for c in filtered if c.get("oracle_id")}
     lookup: dict[str, dict] = {}
@@ -131,6 +166,7 @@ def main():
             "flavor_text": get_flavor_text(card),
             "image_url": get_image_url(card),
             "image_url_back": get_image_url_back(card),
+            **first_printed_fields(first_print_cache.get(oid)),
         }
 
     # ── Normal game data (oracle-text unique words, mainline sets only) ──────
@@ -160,6 +196,8 @@ def main():
             "oracle_text": extra.get("oracle_text", ""),
             "image_url": extra.get("image_url", ""),
             "image_url_back": extra.get("image_url_back", ""),
+            "first_set_name": extra.get("first_set_name", ""),
+            "first_printed_year": extra.get("first_printed_year", ""),
             "unique_words": entry["unique_words"],
         })
 
@@ -193,6 +231,8 @@ def main():
             "flavor_text": extra.get("flavor_text", ""),
             "image_url": extra.get("image_url", ""),
             "image_url_back": extra.get("image_url_back", ""),
+            "first_set_name": extra.get("first_set_name", ""),
+            "first_printed_year": extra.get("first_printed_year", ""),
             "unique_words": exclusive,
         })
     flavor_data.sort(key=lambda r: r["name"])
@@ -222,6 +262,8 @@ def main():
             "flavor_text": extra.get("flavor_text", ""),
             "image_url": extra.get("image_url", ""),
             "image_url_back": extra.get("image_url_back", ""),
+            "first_set_name": extra.get("first_set_name", ""),
+            "first_printed_year": extra.get("first_printed_year", ""),
             "unique_words": entry["unique_words"],
         })
     print(f"  {len(wildcard_data):,} wildcard puzzle cards found.", file=sys.stderr)
@@ -273,6 +315,8 @@ def main():
             "flavor_text":    extra.get("flavor_text", ""),
             "image_url":      extra.get("image_url", ""),
             "image_url_back": extra.get("image_url_back", ""),
+            "first_set_name":     extra.get("first_set_name", ""),
+            "first_printed_year": extra.get("first_printed_year", ""),
             "unique_words":   entry["unique_words"],
             "edhrec_rank":    card_lookup[oid].get("edhrec_rank") if oid in card_lookup else None,
         })
