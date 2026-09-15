@@ -38,28 +38,32 @@ BULK_DATA_API = "https://api.scryfall.com/bulk-data"
 HEADERS = {"User-Agent": "MTGUniqueWords/1.0", "Accept": "application/json"}
 
 
-def fetch_bulk_download_url() -> str:
-    """Resolve the latest oracle-cards bulk download URL from the Scryfall API.
+def fetch_bulk_download_url(bulk_type: str = "oracle_cards") -> str:
+    """Resolve a bulk download URL from the Scryfall API.
 
-    Scryfall used to expose a `download_uri` on the oracle_cards entry
-    pointing at a plain JSON array. That field has since been removed in
-    favor of `jsonl_download_uri`, a gzip-compressed JSON Lines file. Prefer
-    the plain-JSON field when present (in case it ever returns), and fall
-    back to the JSON Lines download otherwise — download_bulk_file() knows
-    how to decompress and convert either.
+    `bulk_type` selects which bulk file to resolve — "oracle_cards" (one
+    entry per card, carrying its most recent printing) by default, or
+    "default_cards" (every printing of every card), which is what the
+    first-printing hint is derived from.
+
+    Scryfall used to expose a `download_uri` on each entry pointing at a
+    plain JSON array. That field has since been removed in favor of
+    `jsonl_download_uri`, a gzip-compressed JSON Lines file. Prefer the
+    plain-JSON field when present (in case it ever returns), and fall back
+    to the JSON Lines download otherwise.
     """
     req = urllib.request.Request(BULK_DATA_API, headers=HEADERS)
     with urllib.request.urlopen(req) as resp:
         data = json.loads(resp.read())
     for entry in data["data"]:
-        if entry["type"] == "oracle_cards":
+        if entry["type"] == bulk_type:
             url = entry.get("download_uri") or entry.get("jsonl_download_uri")
             if url:
                 return url
             raise RuntimeError(
-                "oracle_cards entry has neither download_uri nor jsonl_download_uri."
+                f"{bulk_type} entry has neither download_uri nor jsonl_download_uri."
             )
-    raise RuntimeError("Could not find oracle_cards entry in Scryfall bulk-data response.")
+    raise RuntimeError(f"Could not find {bulk_type} entry in Scryfall bulk-data response.")
 
 
 def download_bulk_file(dest: Path) -> None:

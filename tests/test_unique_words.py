@@ -423,6 +423,28 @@ class TestFetchBulkDownloadUrl:
             with pytest.raises(RuntimeError):
                 fetch_bulk_download_url()
 
+    def test_resolves_a_non_default_bulk_type(self):
+        # The first-printing hint needs default_cards (every printing),
+        # not oracle_cards (newest printing only).
+        payload = {"object": "list", "data": [
+            {"object": "bulk_data", "type": "oracle_cards",
+             "jsonl_download_uri": "https://data.scryfall.io/oracle-cards/oracle-cards.jsonl.gz"},
+            {"object": "bulk_data", "type": "default_cards",
+             "jsonl_download_uri": "https://data.scryfall.io/default-cards/default-cards.jsonl.gz"},
+        ]}
+        with patch("unique_words.urllib.request.urlopen",
+                   return_value=FakeResponse(json.dumps(payload).encode("utf-8"))):
+            assert fetch_bulk_download_url("default_cards") == \
+                "https://data.scryfall.io/default-cards/default-cards.jsonl.gz"
+
+    def test_raises_when_requested_bulk_type_missing(self):
+        payload = {"object": "list", "data": [
+            {"object": "bulk_data", "type": "oracle_cards", "download_uri": "x"}]}
+        with patch("unique_words.urllib.request.urlopen",
+                   return_value=FakeResponse(json.dumps(payload).encode("utf-8"))):
+            with pytest.raises(RuntimeError, match="default_cards"):
+                fetch_bulk_download_url("default_cards")
+
 
 class TestDownloadBulkFile:
     def test_converts_gzip_jsonl_download_to_json_array(self, tmp_path):

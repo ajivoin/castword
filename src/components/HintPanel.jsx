@@ -49,13 +49,34 @@ export function symClass(sym) {
   return sym.toLowerCase().replace('/', '')
 }
 
+// Cards that never saw a paper printing are tagged with the platform they
+// debuted on (Arena, Magic Online, ...). Paper is recorded explicitly in the
+// data so "no platform" never has to be inferred from a blank; it is listed
+// here because it is the unremarkable case, not because it is unknown.
+const HIDDEN_PLATFORMS = new Set(['Paper'])
+
+// Whether a platform is worth tagging alongside the set it was printed in.
+// Sets that already announce the platform in their own name — every Alchemy
+// set is "Alchemy...", the MTGO-only avatar and promo sets are "Magic
+// Online..." — would just repeat themselves. Sets that don't still need it:
+// "Jumpstart: Historic Horizons" gives no hint that it is Arena-only, and
+// Unfinity's MTGO-only "Name Sticker" Goblin is a different card from the
+// paper _____ Goblin it shares a set with.
+function platformWorthShowing(platform, setName) {
+  if (!platform || HIDDEN_PLATFORMS.has(platform)) return false
+  return !setName.toLowerCase().includes(platform.toLowerCase())
+}
+
 // Formats the "first printed" hint value from a card's first-printing fields.
 // Defensive on undefined fields (older cached data may lack them entirely).
 export function formatFirstPrinted(card) {
   const name = card.first_set_name ?? ''
   const year = card.first_printed_year ?? ''
+  const platform = card.first_printed_platform ?? ''
   if (!name) return '—'
-  return year ? `${name} (${year})` : name
+
+  const printing = year ? `${name} (${year})` : name
+  return platformWorthShowing(platform, name) ? `${printing} · ${platform}` : printing
 }
 
 // Renders a mana cost string like "{2}{U}{U}" using mana-font icons
