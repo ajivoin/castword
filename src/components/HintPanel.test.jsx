@@ -296,6 +296,63 @@ describe('formatFirstPrinted', () => {
   })
 })
 
+// ── first_printed platform tag, end to end through the component ─────────────
+
+describe('first_printed platform tag rendering', () => {
+  const renderWith = (extra) => {
+    render(
+      <HintPanel
+        card={{ ...CARD_COUNTERSPELL, ...extra }}
+        hintsRevealed={3}
+        status="playing"
+        variant="normal"
+      />
+    )
+    return screen.getByText('First printed').closest('.hint-row')
+  }
+
+  it('shows an informative platform tag in the rendered hint', () => {
+    const row = renderWith({
+      first_set_name: 'Jumpstart: Historic Horizons',
+      first_printed_year: '2021',
+      first_printed_platform: 'Arena',
+    })
+    expect(row.textContent).toContain('Jumpstart: Historic Horizons (2021) · Arena')
+  })
+
+  it('renders no tag for a paper card', () => {
+    const row = renderWith({
+      first_set_name: 'Limited Edition Alpha',
+      first_printed_year: '1993',
+      first_printed_platform: 'Paper',
+    })
+    expect(row.textContent).toContain('Limited Edition Alpha (1993)')
+    expect(row.textContent).not.toContain('·')
+    expect(row.textContent).not.toContain('Paper')
+  })
+
+  it('renders no tag when the set name already says the platform', () => {
+    const row = renderWith({
+      first_set_name: 'Magic Online Avatars',
+      first_printed_year: '2003',
+      first_printed_platform: 'Magic Online',
+    })
+    expect(row.textContent).toContain('Magic Online Avatars (2003)')
+    expect(row.textContent).not.toContain('·')
+  })
+
+  it('still censors the card name when a platform tag is present', () => {
+    const row = renderWith({
+      name: 'Arena',
+      first_set_name: 'Jumpstart: Historic Horizons',
+      first_printed_year: '2021',
+      first_printed_platform: 'Arena',
+    })
+    expect(row.querySelector('.redacted')).toBeTruthy()
+    expect(row.textContent).not.toContain('Arena')
+  })
+})
+
 // ── first_printed spoiler redaction ──────────────────────────────────────────
 
 describe('first_printed spoiler redaction', () => {
