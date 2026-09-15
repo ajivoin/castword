@@ -90,12 +90,13 @@ def get_flavor_text(card: dict) -> str:
 
 def first_printed_fields(entry: dict | None) -> dict:
     """
-    Convert one first-printings entry (or None) into the
-    first_set_name/first_printed_year fields threaded into the output
-    datasets. Never raises on a malformed entry — blank fields instead.
+    Convert one first-printings entry (or None) into the first_set_name/
+    first_printed_year/first_printed_platform fields threaded into the
+    output datasets. Never raises on a malformed entry — blank fields
+    instead, which is how "no first-printing data" is represented.
     """
     if not isinstance(entry, dict):
-        return {"first_set_name": "", "first_printed_year": ""}
+        return {"first_set_name": "", "first_printed_year": "", "first_printed_platform": ""}
 
     set_name = entry.get("set_name") or ""
     if not isinstance(set_name, str):
@@ -108,7 +109,15 @@ def first_printed_fields(entry: dict | None) -> dict:
         if candidate.isdigit():
             year = candidate
 
-    return {"first_set_name": set_name, "first_printed_year": year}
+    platform = entry.get("platform") or ""
+    if not isinstance(platform, str):
+        platform = ""
+
+    return {
+        "first_set_name": set_name,
+        "first_printed_year": year,
+        "first_printed_platform": platform,
+    }
 
 
 def flavor_exclusive_words(card: dict, unique_words: list[str]) -> list[str]:
@@ -150,7 +159,7 @@ def main():
     # holds every printing of every card. Downloaded on demand like the
     # oracle-cards dump above.
     first_printings = load_first_printings(ensure_default_cards(DEFAULT_CARDS))
-    print(f"  First printings: {len(first_printings):,} cards with a dated paper printing.", file=sys.stderr)
+    print(f"  First printings: {len(first_printings):,} cards with a first printing.", file=sys.stderr)
 
     # Build enrichment lookup: oracle_id -> extra fields
     card_lookup: dict[str, dict] = {c["oracle_id"]: c for c in filtered if c.get("oracle_id")}
@@ -195,6 +204,7 @@ def main():
             "image_url_back": extra.get("image_url_back", ""),
             "first_set_name": extra.get("first_set_name", ""),
             "first_printed_year": extra.get("first_printed_year", ""),
+            "first_printed_platform": extra.get("first_printed_platform", ""),
             "unique_words": entry["unique_words"],
         })
 
@@ -230,6 +240,7 @@ def main():
             "image_url_back": extra.get("image_url_back", ""),
             "first_set_name": extra.get("first_set_name", ""),
             "first_printed_year": extra.get("first_printed_year", ""),
+            "first_printed_platform": extra.get("first_printed_platform", ""),
             "unique_words": exclusive,
         })
     flavor_data.sort(key=lambda r: r["name"])
@@ -261,6 +272,7 @@ def main():
             "image_url_back": extra.get("image_url_back", ""),
             "first_set_name": extra.get("first_set_name", ""),
             "first_printed_year": extra.get("first_printed_year", ""),
+            "first_printed_platform": extra.get("first_printed_platform", ""),
             "unique_words": entry["unique_words"],
         })
     print(f"  {len(wildcard_data):,} wildcard puzzle cards found.", file=sys.stderr)
@@ -314,6 +326,7 @@ def main():
             "image_url_back": extra.get("image_url_back", ""),
             "first_set_name":     extra.get("first_set_name", ""),
             "first_printed_year": extra.get("first_printed_year", ""),
+            "first_printed_platform": extra.get("first_printed_platform", ""),
             "unique_words":   entry["unique_words"],
             "edhrec_rank":    card_lookup[oid].get("edhrec_rank") if oid in card_lookup else None,
         })

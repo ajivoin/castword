@@ -211,6 +211,59 @@ describe('formatFirstPrinted', () => {
     const card = { name: 'Counterspell' }
     expect(formatFirstPrinted(card)).toBe('—')
   })
+
+  it('does not render the platform for paper cards', () => {
+    const card = {
+      name: 'Counterspell',
+      first_set_name: 'Limited Edition Alpha',
+      first_printed_year: '1993',
+      first_printed_platform: 'Paper',
+    }
+    expect(formatFirstPrinted(card)).toBe('Limited Edition Alpha (1993)')
+  })
+
+  it('appends the platform for a card that never saw paper', () => {
+    const card = {
+      name: 'Davriel, Soul Broker',
+      first_set_name: 'Jumpstart: Historic Horizons',
+      first_printed_year: '2021',
+      first_printed_platform: 'Arena',
+    }
+    expect(formatFirstPrinted(card)).toBe('Jumpstart: Historic Horizons (2021) · Arena')
+  })
+
+  it('appends the platform for each non-paper platform', () => {
+    const cases = [
+      ['Alchemy', 'Alchemy: Murders at Karlov Manor', '2024'],
+      ['Magic Online', 'Magic Online Avatars', '2003'],
+      ['Astral', 'Astral Cards', '1997'],
+    ]
+    for (const [platform, setName, year] of cases) {
+      const card = {
+        name: 'Test', first_set_name: setName,
+        first_printed_year: year, first_printed_platform: platform,
+      }
+      expect(formatFirstPrinted(card)).toBe(`${setName} (${year}) · ${platform}`)
+    }
+  })
+
+  it('appends the platform even when the year is missing', () => {
+    const card = {
+      name: 'Test', first_set_name: 'Magic Online Avatars',
+      first_printed_year: '', first_printed_platform: 'Magic Online',
+    }
+    expect(formatFirstPrinted(card)).toBe('Magic Online Avatars · Magic Online')
+  })
+
+  it('returns "—" when there is no set name, whatever the platform says', () => {
+    const card = { name: 'Test', first_set_name: '', first_printed_platform: 'Arena' }
+    expect(formatFirstPrinted(card)).toBe('—')
+  })
+
+  it('omits the platform when the field is absent (old-shaped card object)', () => {
+    const card = { name: 'Test', first_set_name: 'Innistrad', first_printed_year: '2011' }
+    expect(formatFirstPrinted(card)).toBe('Innistrad (2011)')
+  })
 })
 
 // ── first_printed spoiler redaction ──────────────────────────────────────────

@@ -65,7 +65,7 @@ npm run preview  # preview the production build locally
 
 `fetch_edhrec.py` — fetches and caches EDHRec deck-inclusion counts used to filter the Easy mode card pool.
 
-`first_printings.py` — derives each card's first paper printing (set name and year) for the "First printed in" hint from Scryfall's `default-cards` bulk file, which contains every printing of every card. (The `oracle-cards` dump used elsewhere carries only each card's *most recent* printing.)
+`first_printings.py` — derives each card's first printing (set name and year) for the "First printed in" hint from Scryfall's `default-cards` bulk file, which contains every printing of every card. (The `oracle-cards` dump used elsewhere carries only each card's *most recent* printing.) Paper printings always win; cards that never saw paper — Alchemy and other Arena-only cards, Magic Online avatars, the 1997 Astral set — fall back to their first digital printing and are tagged with the platform, e.g. *Jumpstart: Historic Horizons (2021) · Arena*.
 
 `prepare_data.py` calls into all three and produces five game datasets:
 

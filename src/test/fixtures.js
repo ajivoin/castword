@@ -12,6 +12,7 @@ export const CARD_COUNTERSPELL = {
   unique_words: ['counterspell'],
   first_set_name: 'Limited Edition Beta',
   first_printed_year: '1993',
+  first_printed_platform: 'Paper',
 }
 
 export const CARD_LIGHTNING_BOLT = {
@@ -28,6 +29,7 @@ export const CARD_LIGHTNING_BOLT = {
   unique_words: ['bolt'],
   first_set_name: 'Limited Edition Alpha',
   first_printed_year: '1993',
+  first_printed_platform: 'Paper',
 }
 
 export const CARD_POOL = [CARD_COUNTERSPELL, CARD_LIGHTNING_BOLT]

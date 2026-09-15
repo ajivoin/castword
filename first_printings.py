@@ -34,6 +34,17 @@ DEFAULT_CARDS_FILE = Path(__file__).parent / "default-cards.jsonl.gz"
 
 GZIP_MAGIC = b"\x1f\x8b"
 
+# Platform a printing appeared on. PAPER is recorded explicitly rather than
+# left blank so that "no platform" never has to be inferred from an empty
+# string — a blank entry means "no first-printing data at all". Consumers
+# suppress PAPER when rendering, since it is the unremarkable case.
+PAPER = "Paper"
+PLATFORMS_BY_GAME = {
+    "arena": "Arena",
+    "mtgo": "Magic Online",
+    "astral": "Astral",
+}
+
 
 def _oracle_id(record: dict) -> str:
     """
@@ -53,25 +64,59 @@ def _oracle_id(record: dict) -> str:
     return ""
 
 
+def _platform(record: dict) -> str:
+    """
+    Name the platform a single printing appeared on, or "" if it names no
+    playable platform at all. Scryfall leaves `games` empty on printings
+    from unreleased sets, so "" also covers "not out yet".
+
+    Paper wins over everything: a card released on paper is paper, however
+    many digital clients it also appears on. Alchemy is checked before the
+    game list because Alchemy printings are themselves tagged games=["arena"]
+    — only set_type distinguishes them.
+    """
+    games = record.get("games")
+    if not isinstance(games, list) or not games:
+        return ""
+
+    if "paper" in games:
+        return PAPER
+
+    if record.get("set_type") == "alchemy":
+        return "Alchemy"
+
+    for game in games:
+        platform = PLATFORMS_BY_GAME.get(game)
+        if platform:
+            return platform
+
+    return ""
+
+
 def earliest_printings(records: Iterable[object]) -> dict[str, dict]:
     """
     Reduce an iterable of Scryfall printing records to a map of
-    oracle_id -> {"set_name": ..., "released_at": ...} describing each
-    card's earliest *paper* printing.
+    oracle_id -> {"set_name": ..., "released_at": ..., "platform": ...}
+    describing each card's earliest printing.
 
-    Records that are malformed, digital-only, undated, or missing an
-    oracle_id are skipped: a card only appears in the result if it has at
-    least one dated paper printing. Entries match the shape that
-    prepare_data.first_printed_fields() consumes.
+    A card's earliest *paper* printing always wins. Cards that never saw
+    paper — Alchemy and other Arena-only cards, Magic Online avatars, the
+    1997 Astral set — fall back to their earliest digital printing, tagged
+    with the platform it appeared on, rather than being dropped.
+
+    Records that are malformed, undated, unreleased, or missing an oracle_id
+    are skipped. Entries match the shape prepare_data.first_printed_fields()
+    consumes.
     """
-    earliest: dict[str, dict] = {}
+    paper: dict[str, dict] = {}
+    digital: dict[str, dict] = {}
 
     for record in records:
         if not isinstance(record, dict):
             continue
 
-        games = record.get("games")
-        if not isinstance(games, list) or "paper" not in games:
+        platform = _platform(record)
+        if not platform:
             continue
 
         released_at = record.get("released_at")
@@ -82,19 +127,23 @@ def earliest_printings(records: Iterable[object]) -> dict[str, dict]:
         if not oracle_id:
             continue
 
+        bucket = paper if platform == PAPER else digital
+
         # ISO-8601 dates sort lexicographically, so a string compare is
         # enough to find the earliest printing.
-        current = earliest.get(oracle_id)
+        current = bucket.get(oracle_id)
         if current is not None and current["released_at"] <= released_at:
             continue
 
         set_name = record.get("set_name")
-        earliest[oracle_id] = {
+        bucket[oracle_id] = {
             "set_name": set_name if isinstance(set_name, str) else "",
             "released_at": released_at,
+            "platform": platform,
         }
 
-    return earliest
+    # Paper printings take precedence over any digital fallback.
+    return {**digital, **paper}
 
 
 def iter_bulk_records(path: Path) -> Iterator[dict]:
@@ -183,7 +232,7 @@ def main() -> None:
     args = parser.parse_args()
 
     printings = load_first_printings(ensure_default_cards(Path(args.bulk_file)))
-    print(f"{len(printings):,} cards with a dated paper printing.", file=sys.stderr)
+    print(f"{len(printings):,} cards with a first printing.", file=sys.stderr)
 
 
 if __name__ == "__main__":

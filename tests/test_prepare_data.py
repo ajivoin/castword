@@ -204,14 +204,17 @@ class TestFlavorExclusiveWords:
 
 class TestFirstPrintedFields:
     def test_full_cache_hit(self):
-        entry = {"set_name": "Limited Edition Alpha", "released_at": "1993-08-05"}
+        entry = {"set_name": "Limited Edition Alpha", "released_at": "1993-08-05",
+                 "platform": "Paper"}
         assert first_printed_fields(entry) == {
             "first_set_name": "Limited Edition Alpha",
             "first_printed_year": "1993",
+            "first_printed_platform": "Paper",
         }
 
     def test_cache_entry_is_none(self):
-        assert first_printed_fields(None) == {"first_set_name": "", "first_printed_year": ""}
+        assert first_printed_fields(None) == {
+            "first_set_name": "", "first_printed_year": "", "first_printed_platform": ""}
 
     def test_oracle_id_absent_from_cache_entirely(self):
         # Simulates cache.get(oid) returning None because the key isn't present.
@@ -219,23 +222,28 @@ class TestFirstPrintedFields:
         assert first_printed_fields(cache.get("missing-oid")) == {
             "first_set_name": "",
             "first_printed_year": "",
+            "first_printed_platform": "",
         }
 
     def test_empty_released_at(self):
         entry = {"set_name": "Alpha", "released_at": ""}
-        assert first_printed_fields(entry) == {"first_set_name": "Alpha", "first_printed_year": ""}
+        assert first_printed_fields(entry) == {
+            "first_set_name": "Alpha", "first_printed_year": "", "first_printed_platform": ""}
 
     def test_none_released_at(self):
         entry = {"set_name": "Alpha", "released_at": None}
-        assert first_printed_fields(entry) == {"first_set_name": "Alpha", "first_printed_year": ""}
+        assert first_printed_fields(entry) == {
+            "first_set_name": "Alpha", "first_printed_year": "", "first_printed_platform": ""}
 
     def test_non_date_garbage_released_at(self):
         entry = {"set_name": "Alpha", "released_at": "not-a-date"}
-        assert first_printed_fields(entry) == {"first_set_name": "Alpha", "first_printed_year": ""}
+        assert first_printed_fields(entry) == {
+            "first_set_name": "Alpha", "first_printed_year": "", "first_printed_platform": ""}
 
     def test_released_at_too_short(self):
         entry = {"set_name": "Alpha", "released_at": "19"}
-        assert first_printed_fields(entry) == {"first_set_name": "Alpha", "first_printed_year": ""}
+        assert first_printed_fields(entry) == {
+            "first_set_name": "Alpha", "first_printed_year": "", "first_printed_platform": ""}
 
     def test_well_formed_released_at_extracts_year(self):
         entry = {"set_name": "Kamigawa: Neon Dynasty", "released_at": "2022-02-18"}
@@ -243,12 +251,36 @@ class TestFirstPrintedFields:
 
     def test_missing_set_name_key(self):
         entry = {"released_at": "2022-02-18"}
-        assert first_printed_fields(entry) == {"first_set_name": "", "first_printed_year": "2022"}
+        assert first_printed_fields(entry) == {
+            "first_set_name": "", "first_printed_year": "2022", "first_printed_platform": ""}
 
     def test_malformed_entry_non_dict_does_not_crash(self):
-        assert first_printed_fields("garbage") == {"first_set_name": "", "first_printed_year": ""}
-        assert first_printed_fields(42) == {"first_set_name": "", "first_printed_year": ""}
-        assert first_printed_fields([]) == {"first_set_name": "", "first_printed_year": ""}
+        assert first_printed_fields("garbage") == {
+            "first_set_name": "", "first_printed_year": "", "first_printed_platform": ""}
+        assert first_printed_fields(42) == {
+            "first_set_name": "", "first_printed_year": "", "first_printed_platform": ""}
+
+    def test_digital_platform_is_passed_through(self):
+        entry = {"set_name": "Jumpstart: Historic Horizons", "released_at": "2021-08-26",
+                 "platform": "Arena"}
+        assert first_printed_fields(entry) == {
+            "first_set_name": "Jumpstart: Historic Horizons",
+            "first_printed_year": "2021",
+            "first_printed_platform": "Arena",
+        }
+
+    def test_missing_platform_key_yields_blank(self):
+        entry = {"set_name": "Alpha", "released_at": "1993-08-05"}
+        assert first_printed_fields(entry)["first_printed_platform"] == ""
+
+    def test_non_string_platform_yields_blank(self):
+        entry = {"set_name": "Alpha", "released_at": "1993-08-05", "platform": 42}
+        assert first_printed_fields(entry)["first_printed_platform"] == ""
+
+    def test_list_entry_does_not_crash(self):
+        assert first_printed_fields([]) == {
+            "first_set_name": "", "first_printed_year": "", "first_printed_platform": ""}
 
     def test_empty_dict_entry(self):
-        assert first_printed_fields({}) == {"first_set_name": "", "first_printed_year": ""}
+        assert first_printed_fields({}) == {
+            "first_set_name": "", "first_printed_year": "", "first_printed_platform": ""}
