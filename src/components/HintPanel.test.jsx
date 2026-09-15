@@ -232,27 +232,57 @@ describe('formatFirstPrinted', () => {
     expect(formatFirstPrinted(card)).toBe('Jumpstart: Historic Horizons (2021) · Arena')
   })
 
-  it('appends the platform for each non-paper platform', () => {
-    const cases = [
-      ['Alchemy', 'Alchemy: Murders at Karlov Manor', '2024'],
-      ['Magic Online', 'Magic Online Avatars', '2003'],
-      ['Astral', 'Astral Cards', '1997'],
-    ]
-    for (const [platform, setName, year] of cases) {
-      const card = {
-        name: 'Test', first_set_name: setName,
-        first_printed_year: year, first_printed_platform: platform,
-      }
-      expect(formatFirstPrinted(card)).toBe(`${setName} (${year}) · ${platform}`)
-    }
-  })
-
   it('appends the platform even when the year is missing', () => {
     const card = {
-      name: 'Test', first_set_name: 'Magic Online Avatars',
+      name: 'Test', first_set_name: 'Unfinity',
       first_printed_year: '', first_printed_platform: 'Magic Online',
     }
-    expect(formatFirstPrinted(card)).toBe('Magic Online Avatars · Magic Online')
+    expect(formatFirstPrinted(card)).toBe('Unfinity · Magic Online')
+  })
+
+  // A set whose own name already announces the platform needs no tag.
+  // Every Alchemy set is named "Alchemy...", and the MTGO-only avatar and
+  // promo sets are named "Magic Online...".
+  it.each([
+    ['Alchemy', 'Alchemy: Murders at Karlov Manor', '2024'],
+    ['Alchemy', "Alchemy Horizons: Baldur's Gate", '2022'],
+    ['Magic Online', 'Magic Online Avatars', '2003'],
+    ['Magic Online', 'Magic Online Promos', '2010'],
+    ['Astral', 'Astral Cards', '1997'],
+  ])('omits a redundant %s tag on "%s"', (platform, setName, year) => {
+    const card = {
+      name: 'Test', first_set_name: setName,
+      first_printed_year: year, first_printed_platform: platform,
+    }
+    expect(formatFirstPrinted(card)).toBe(`${setName} (${year})`)
+  })
+
+  // ...but a set that does not name the platform still needs the tag.
+  it.each([
+    ['Arena', 'Jumpstart: Historic Horizons', '2021'],
+    ['Magic Online', 'Unfinity', '2022'],
+  ])('keeps an informative %s tag on "%s"', (platform, setName, year) => {
+    const card = {
+      name: 'Test', first_set_name: setName,
+      first_printed_year: year, first_printed_platform: platform,
+    }
+    expect(formatFirstPrinted(card)).toBe(`${setName} (${year}) · ${platform}`)
+  })
+
+  it('matches the set name case-insensitively when deciding redundancy', () => {
+    const card = {
+      name: 'Test', first_set_name: 'ALCHEMY: INNISTRAD',
+      first_printed_year: '2021', first_printed_platform: 'Alchemy',
+    }
+    expect(formatFirstPrinted(card)).toBe('ALCHEMY: INNISTRAD (2021)')
+  })
+
+  it('hides Paper even though no set name mentions it', () => {
+    const card = {
+      name: 'Test', first_set_name: 'Innistrad',
+      first_printed_year: '2011', first_printed_platform: 'Paper',
+    }
+    expect(formatFirstPrinted(card)).toBe('Innistrad (2011)')
   })
 
   it('returns "—" when there is no set name, whatever the platform says', () => {
