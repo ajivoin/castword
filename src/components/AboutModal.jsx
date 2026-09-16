@@ -16,14 +16,15 @@ export default function AboutModal({ onClose }) {
 
         <section className="about-section">
           <h3 className="about-heading">How to play</h3>
-          <p className="about-text">You have <strong>6 guesses</strong>. After each wrong guess, a new clue is revealed:</p>
+          <p className="about-text">You have <strong>7 guesses</strong>. After each wrong guess, a new clue is revealed:</p>
           <ol className="about-steps">
             <li><span className="about-step-num">1</span> The unique word — always shown first</li>
             <li><span className="about-step-num">2</span> Mana cost</li>
             <li><span className="about-step-num">3</span> Card type</li>
-            <li><span className="about-step-num">4</span> First printed</li>
-            <li><span className="about-step-num">5</span> Card text</li>
-            <li><span className="about-step-num">6</span> Flavor text</li>
+            <li><span className="about-step-num">4</span> Flavor text — or, if the card has none, how many sets it's been printed in</li>
+            <li><span className="about-step-num">5</span> First printed</li>
+            <li><span className="about-step-num">6</span> Card text</li>
+            <li><span className="about-step-num">7</span> Name shape — the answer with its letters and digits blanked out</li>
           </ol>
           <p className="about-text">
             Type any card name in the search box to make a guess. Hit <strong>Skip</strong> to reveal the next clue without

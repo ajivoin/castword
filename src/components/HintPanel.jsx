@@ -94,68 +94,84 @@ function ManaCost({ cost }) {
   )
 }
 
-const HINT_DEFS_NORMAL = [
+export function formatReprints(card) {
+  const sets = card.printing_set_count ?? 0
+  if (sets < 1) return '\u2014'
+  if (sets === 1) return 'Never reprinted'
+  const others = sets - 1
+  return `Reprinted in ${others} other set${others === 1 ? '' : 's'}`
+}
+
+// Blank out a name's letters and digits, leaving punctuation and spacing
+// intact — the final clue is the shape of the answer, not its spelling.
+// Card names really do carry digits ("+2 Mace"), diacritics ("Lim-Dûl's
+// Vault") and literal underscores ("Wolf in _____ Clothing"), so the blanks
+// are the same █ this panel already redacts with rather than an underscore.
+export function nameShape(name) {
+  return (name ?? '').replace(/[\p{L}\p{N}]/gu, '█')
+}
+
+const HINT_DEFS = [
   { id: 'words',         label: 'Unique word(s)' },
   { id: 'cost',          label: 'Mana cost' },
   { id: 'type',          label: 'Type' },
+  { id: 'flavor',        label: 'Flavor text' },
   { id: 'first_printed', label: 'First printed' },
   { id: 'text',          label: 'Card text' },
-  { id: 'flavor',        label: 'Flavor text' },
+  { id: 'name_shape',    label: 'Name shape' },
 ]
 
-const HINT_DEFS_BONUS = [
-  { id: 'words',         label: 'Unique flavor word(s)' },
-  { id: 'cost',          label: 'Mana cost' },
-  { id: 'type',          label: 'Type' },
-  { id: 'first_printed', label: 'First printed' },
-  { id: 'text',          label: 'Card text' },
-  { id: 'flavor',        label: 'Flavor text' },
-]
+// One rung per guess — useGame's MAX_GUESSES is held to this.
+export const HINT_COUNT = HINT_DEFS.length
 
-const HINT_DEFS_WILDCARD = [
-  { id: 'words',         label: 'Unique word(s)' },
-  { id: 'cost',          label: 'Mana cost' },
-  { id: 'type',          label: 'Type' },
-  { id: 'first_printed', label: 'First printed' },
-  { id: 'text',          label: 'Card text' },
-  { id: 'flavor',        label: 'Flavor text' },
-]
-
-const HINT_DEFS = { normal: HINT_DEFS_NORMAL, bonus: HINT_DEFS_BONUS, wildcard: HINT_DEFS_WILDCARD }
+function hintLabel({ id, label }, card, variant) {
+  // The flavor round draws its unique words from flavor text alone, so its
+  // first rung says so. Every other rung is shared across variants.
+  if (id === 'words' && variant === 'bonus') return 'Unique flavor word(s)'
+  // Most cards outside the flavor round carry no flavor text at all. That
+  // rung would render blank, so it falls back to the reprint count — and
+  // relabels, rather than passing the fallback off as flavor text.
+  if (id === 'flavor' && !card.flavor_text) return 'Reprints'
+  return label
+}
 
 export default function HintPanel({ card, hintsRevealed, status, variant = 'normal' }) {
-  const hintDefs = HINT_DEFS[variant] ?? HINT_DEFS_NORMAL
-  const visibleCount = status !== 'playing' ? hintDefs.length : hintsRevealed + 1
+  const visibleCount = status !== 'playing' ? HINT_COUNT : hintsRevealed + 1
 
   return (
     <div className="hint-panel">
-      {hintDefs.slice(0, visibleCount).map(({ id, label }, idx) => (
-        <div key={id} className={`hint-row ${idx > 0 && idx === hintsRevealed && status === 'playing' ? 'hint-new' : ''}`}>
-          <span className="hint-label">{label}</span>
+      {HINT_DEFS.slice(0, visibleCount).map((def, idx) => (
+        <div key={def.id} className={`hint-row ${idx > 0 && idx === hintsRevealed && status === 'playing' ? 'hint-new' : ''}`}>
+          <span className="hint-label">{hintLabel(def, card, variant)}</span>
           <span className="hint-value">
-            {id === 'words' && (
+            {def.id === 'words' && (
               <span className="word-chips">
                 {card.unique_words.map((w) => (
                   <span key={w} className="word-chip">{w}</span>
                 ))}
               </span>
             )}
-            {id === 'type' && card.type_line}
-            {id === 'cost' && <ManaCost cost={card.mana_cost} />}
-            {id === 'first_printed' && (
+            {def.id === 'type' && card.type_line}
+            {def.id === 'cost' && <ManaCost cost={card.mana_cost} />}
+            {def.id === 'first_printed' && (
               <span className="oracle-text">
                 {renderText(formatFirstPrinted(card), [], card.name)}
               </span>
             )}
-            {id === 'text' && (
+            {def.id === 'text' && (
               <span className="oracle-text">
                 {renderText(card.oracle_text, card.unique_words, card.name)}
               </span>
             )}
-            {id === 'flavor' && (
-              <span className="oracle-text flavor-text">
-                {renderText(card.flavor_text ?? '', card.unique_words, card.name)}
-              </span>
+            {def.id === 'flavor' && (
+              card.flavor_text
+                ? <span className="oracle-text flavor-text">
+                    {renderText(card.flavor_text, card.unique_words, card.name)}
+                  </span>
+                : <span className="oracle-text">{formatReprints(card)}</span>
+            )}
+            {def.id === 'name_shape' && (
+              <span className="oracle-text name-shape">{nameShape(card.name)}</span>
             )}
           </span>
         </div>

@@ -31,7 +31,7 @@ export default function GameBoard({ mode, variant, streak, gameState, onGuess, o
               disabled={done}
               pastGuesses={guesses}
             />
-            {(hintsRevealed < 5 || guesses.length === maxGuesses - 1) && (
+            {(hintsRevealed < maxGuesses - 1 || guesses.length === maxGuesses - 1) && (
               <button
                 className={guesses.length === maxGuesses - 1 ? 'btn-give-up' : 'btn-skip'}
                 onClick={onSkip}

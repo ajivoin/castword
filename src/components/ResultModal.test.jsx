@@ -48,9 +48,14 @@ describe('guessEmojis', () => {
     expect(guessEmojis(gs)).toBe('🟨🟧🟥🟫🟪')
   })
 
-  it('sixth+ wrong guess → ⬛', () => {
+  it('sixth wrong guess → 🟦', () => {
     const gs = Array(6).fill(null).map((_, i) => ({ value: String(i), correct: false }))
-    expect(guessEmojis(gs)).toBe('🟨🟧🟥🟫🟪⬛')
+    expect(guessEmojis(gs)).toBe('🟨🟧🟥🟫🟪🟦')
+  })
+
+  it('seventh+ wrong guess → ⬛', () => {
+    const gs = Array(7).fill(null).map((_, i) => ({ value: String(i), correct: false }))
+    expect(guessEmojis(gs)).toBe('🟨🟧🟥🟫🟪🟦⬛')
   })
 
   it('mixed sequence: skip, wrong, correct', () => {

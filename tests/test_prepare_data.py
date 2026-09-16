@@ -1,6 +1,9 @@
 """Tests for prepare_data.py — card enrichment functions."""
+import json
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -11,6 +14,7 @@ from prepare_data import (
     get_flavor_text,
     flavor_exclusive_words,
     first_printed_fields,
+    printing_fields,
     DOUBLE_FACED_LAYOUTS,
 )
 
@@ -284,3 +288,78 @@ class TestFirstPrintedFields:
     def test_empty_dict_entry(self):
         assert first_printed_fields({}) == {
             "first_set_name": "", "first_printed_year": "", "first_printed_platform": ""}
+
+
+# ── printing_fields ───────────────────────────────────────────────────────────
+
+class TestPrintingFields:
+    def test_keeps_the_cards_own_flavor_text(self):
+        entry = {"flavor_text": "Older words.", "printing_set_count": 3}
+        assert printing_fields(entry, "Current words.")["flavor_text"] == "Current words."
+
+    def test_falls_back_to_an_older_printings_flavor_text(self):
+        entry = {"flavor_text": "Older words.", "printing_set_count": 3}
+        assert printing_fields(entry, "")["flavor_text"] == "Older words."
+
+    def test_blank_when_no_printing_ever_had_flavor_text(self):
+        entry = {"flavor_text": "", "printing_set_count": 3}
+        assert printing_fields(entry, "")["flavor_text"] == ""
+
+    def test_carries_the_printing_set_count(self):
+        entry = {"flavor_text": "", "printing_set_count": 7}
+        assert printing_fields(entry, "")["printing_set_count"] == 7
+
+    def test_missing_entry_yields_blank_fields(self):
+        assert printing_fields(None, "") == {"flavor_text": "", "printing_set_count": 0}
+
+    def test_missing_entry_still_keeps_the_cards_own_flavor_text(self):
+        assert printing_fields(None, "Current words.")["flavor_text"] == "Current words."
+
+    def test_malformed_entry_yields_blank_fields(self):
+        assert printing_fields("not a dict", "") == {"flavor_text": "", "printing_set_count": 0}
+
+    def test_non_integer_set_count_is_treated_as_missing(self):
+        entry = {"flavor_text": "", "printing_set_count": "lots"}
+        assert printing_fields(entry, "")["printing_set_count"] == 0
+
+    def test_non_string_fallback_flavor_text_is_treated_as_missing(self):
+        entry = {"flavor_text": ["words"], "printing_set_count": 1}
+        assert printing_fields(entry, "")["flavor_text"] == ""
+
+
+# ── generated datasets ────────────────────────────────────────────────────────
+
+DATA_DIR = Path(__file__).parent.parent / "src" / "data"
+GAME_DATASETS = ["easy-data.json", "game-data.json", "flavor-data.json", "wildcard-data.json"]
+
+
+@pytest.mark.parametrize("filename", GAME_DATASETS)
+class TestGeneratedDatasets:
+    def _load(self, filename):
+        path = DATA_DIR / filename
+        if not path.exists():
+            pytest.skip(f"{filename} not generated")
+        return json.loads(path.read_text(encoding="utf-8"))
+
+    def test_every_card_carries_flavor_text(self, filename):
+        cards = self._load(filename)
+        assert all("flavor_text" in card for card in cards)
+
+    def test_every_card_carries_a_printing_set_count(self, filename):
+        cards = self._load(filename)
+        assert all(isinstance(card.get("printing_set_count"), int) for card in cards)
+
+    def test_set_count_agrees_with_the_first_printing(self, filename):
+        """
+        A card either has a printing history or it doesn't. Unreleased
+        spoiler cards reach the pool with neither a first printing nor a
+        set count, and both hints render "—" for them; every other card
+        must have both.
+        """
+        cards = self._load(filename)
+        disagree = [
+            card["name"]
+            for card in cards
+            if bool(card["first_set_name"]) != (card["printing_set_count"] >= 1)
+        ]
+        assert disagree == []

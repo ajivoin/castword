@@ -203,6 +203,14 @@ mark { background: color-mix(in srgb, var(--accent) 30%, transparent); color: in
   color: var(--text-muted);
 }
 
+/* Blanked-out answer: monospace so the blanks line up and the punctuation
+   that survives them stays countable. */
+.name-shape {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0.08em;
+  word-break: break-word;
+}
+
 /* ── Guess input ── */
 .guess-section { display: flex; flex-direction: column; gap: 12px; }
 

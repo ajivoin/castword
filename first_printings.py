@@ -1,20 +1,25 @@
 """
 first_printings.py
 
-Derives each card's first paper printing (set name + release date) from
-Scryfall's `default_cards` bulk file, which contains every printing of
+Derives per-card facts that only the *full* printing history can answer,
+from Scryfall's `default_cards` bulk file, which contains every printing of
 every card. The `oracle_cards` bulk file used elsewhere in this pipeline
 carries only the most recent printing of each card, so it cannot answer
-"when was this first printed?".
+"when was this first printed?", "how many sets was this in?", or "did an
+older printing carry flavor text the current one dropped?".
 
 Deriving this from the bulk file means one download instead of one API
 request per card — no rate limits, no partial failures, no cache to keep
 in sync.
 
 Importable API:
-    from first_printings import load_first_printings
-    printings = load_first_printings(Path("default-cards.jsonl.gz"))
-    # -> {oracle_id: {"set_name": ..., "released_at": ...}}
+    from first_printings import load_printing_facts
+    facts = load_printing_facts(Path("default-cards.jsonl.gz"))
+    # -> {oracle_id: {"set_name": ..., "released_at": ..., "platform": ...,
+    #                 "printing_set_count": ..., "flavor_text": ...}}
+
+    load_first_printings() is the narrow view of the same pass, carrying
+    only the first-printing fields.
 
 CLI usage:
     python first_printings.py [--bulk-file default-cards.jsonl.gz]
@@ -23,6 +28,7 @@ CLI usage:
 import gzip
 import json
 import sys
+from collections import defaultdict
 import urllib.request
 from pathlib import Path
 from typing import Iterable, Iterator
@@ -44,6 +50,10 @@ PLATFORMS_BY_GAME = {
     "mtgo": "Magic Online",
     "astral": "Astral",
 }
+
+
+# The subset of a printing-facts entry that describes the first printing.
+FIRST_PRINTING_FIELDS = ("set_name", "released_at", "platform")
 
 
 def _oracle_id(record: dict) -> str:
@@ -93,23 +103,59 @@ def _platform(record: dict) -> str:
     return ""
 
 
-def earliest_printings(records: Iterable[object]) -> dict[str, dict]:
+def _flavor_text(record: dict) -> str:
+    """
+    Combined flavor text of one printing, joining faces the same way a
+    card's own text is joined. Implemented here rather than imported from
+    prepare_data, which imports *this* module.
+    """
+    faces = record.get("card_faces")
+    if not isinstance(faces, list) or not faces:
+        faces = [record]
+
+    parts = []
+    for face in faces:
+        if not isinstance(face, dict):
+            continue
+        text = face.get("flavor_text")
+        if isinstance(text, str) and text:
+            parts.append(text)
+    return "\n//\n".join(parts)
+
+
+def printing_facts(records: Iterable[object]) -> dict[str, dict]:
     """
     Reduce an iterable of Scryfall printing records to a map of
-    oracle_id -> {"set_name": ..., "released_at": ..., "platform": ...}
-    describing each card's earliest printing.
+    oracle_id -> {"set_name", "released_at", "platform",
+                  "printing_set_count", "flavor_text"}
+    in a single pass. The bulk file holds well over 100,000 printings, so
+    every fact derived from printing history is gathered here rather than
+    by re-reading the file once per question.
 
-    A card's earliest *paper* printing always wins. Cards that never saw
-    paper — Alchemy and other Arena-only cards, Magic Online avatars, the
-    1997 Astral set — fall back to their earliest digital printing, tagged
-    with the platform it appeared on, rather than being dropped.
+    A card's earliest *paper* printing always wins, for the first-printing
+    fields and for the other two alike. Cards that never saw paper —
+    Alchemy and other Arena-only cards, Magic Online avatars, the 1997
+    Astral set — fall back to their digital printings rather than being
+    dropped.
+
+    `printing_set_count` counts *distinct sets*, not printings: foil,
+    promo, and showcase variants share a set code and count once. It is 0
+    only when no printing named a set at all.
+
+    `flavor_text` is the flavor text of the earliest printing that carried
+    any, or "" if no printing ever did. It backs the hint for cards whose
+    current printing dropped the flavor text an older one had.
 
     Records that are malformed, undated, unreleased, or missing an oracle_id
-    are skipped. Entries match the shape prepare_data.first_printed_fields()
-    consumes.
+    are skipped.
     """
     paper: dict[str, dict] = {}
     digital: dict[str, dict] = {}
+    paper_sets: dict[str, set[str]] = defaultdict(set)
+    digital_sets: dict[str, set[str]] = defaultdict(set)
+    # oracle_id -> (released_at, flavor_text) of the earliest printing with one
+    paper_flavor: dict[str, tuple[str, str]] = {}
+    digital_flavor: dict[str, tuple[str, str]] = {}
 
     for record in records:
         if not isinstance(record, dict):
@@ -127,10 +173,22 @@ def earliest_printings(records: Iterable[object]) -> dict[str, dict]:
         if not oracle_id:
             continue
 
-        bucket = paper if platform == PAPER else digital
+        is_paper = platform == PAPER
+        bucket = paper if is_paper else digital
+        sets = paper_sets if is_paper else digital_sets
+        flavors = paper_flavor if is_paper else digital_flavor
 
-        # ISO-8601 dates sort lexicographically, so a string compare is
-        # enough to find the earliest printing.
+        set_code = record.get("set")
+        if isinstance(set_code, str) and set_code:
+            sets[oracle_id].add(set_code)
+
+        flavor = _flavor_text(record)
+        if flavor:
+            seen = flavors.get(oracle_id)
+            # ISO-8601 dates sort lexicographically, here and below.
+            if seen is None or released_at < seen[0]:
+                flavors[oracle_id] = (released_at, flavor)
+
         current = bucket.get(oracle_id)
         if current is not None and current["released_at"] <= released_at:
             continue
@@ -143,7 +201,29 @@ def earliest_printings(records: Iterable[object]) -> dict[str, dict]:
         }
 
     # Paper printings take precedence over any digital fallback.
-    return {**digital, **paper}
+    facts = {**digital, **paper}
+    for oracle_id, entry in facts.items():
+        # An empty paper set is falsy, so a paper-less card falls through
+        # to its digital sets rather than reporting zero.
+        entry["printing_set_count"] = len(
+            paper_sets.get(oracle_id) or digital_sets.get(oracle_id) or ()
+        )
+        earliest_flavor = paper_flavor.get(oracle_id) or digital_flavor.get(oracle_id)
+        entry["flavor_text"] = earliest_flavor[1] if earliest_flavor else ""
+
+    return facts
+
+
+def earliest_printings(records: Iterable[object]) -> dict[str, dict]:
+    """
+    The first-printing view of printing_facts(): oracle_id -> {"set_name",
+    "released_at", "platform"}. Entries match the shape
+    prepare_data.first_printed_fields() consumes.
+    """
+    return {
+        oracle_id: {field: entry[field] for field in FIRST_PRINTING_FIELDS}
+        for oracle_id, entry in printing_facts(records).items()
+    }
 
 
 def iter_bulk_records(path: Path) -> Iterator[dict]:
@@ -174,6 +254,18 @@ def load_first_printings(path: Path = DEFAULT_CARDS_FILE) -> dict[str, dict]:
     if not path.exists():
         return {}
     return earliest_printings(iter_bulk_records(path))
+
+
+def load_printing_facts(path: Path = DEFAULT_CARDS_FILE) -> dict[str, dict]:
+    """
+    Build the full oracle_id -> printing-facts map from a bulk file.
+    Returns an empty map if the file is absent, so the data pipeline can
+    still complete (with blank hint fields) without it.
+    """
+    path = Path(path)
+    if not path.exists():
+        return {}
+    return printing_facts(iter_bulk_records(path))
 
 
 def download_default_cards(dest: Path = DEFAULT_CARDS_FILE) -> None:
