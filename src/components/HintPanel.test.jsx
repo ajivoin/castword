@@ -1,7 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import HintPanel, { censorPatterns, renderText, symClass, formatFirstPrinted } from './HintPanel.jsx'
-import { CARD_COUNTERSPELL } from '../test/fixtures.js'
+import HintPanel, {
+  censorPatterns,
+  renderText,
+  symClass,
+  formatFirstPrinted,
+  formatReprints,
+  nameShape,
+  HINT_COUNT,
+} from './HintPanel.jsx'
+import { MAX_GUESSES } from '../hooks/useGame.js'
+import { CARD_COUNTERSPELL, CARD_LIGHTNING_BOLT } from '../test/fixtures.js'
 
 // ── censorPatterns ────────────────────────────────────────────────────────────
 
@@ -154,19 +163,34 @@ describe('HintPanel component', () => {
     expect(screen.getByText('Instant')).toBeInTheDocument()
   })
 
-  it('shows first printed label at hintsRevealed 3', () => {
+  it('shows flavor text label at hintsRevealed 3', () => {
     render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={3} status="playing" variant="normal" />)
+    expect(screen.getByText('Flavor text')).toBeInTheDocument()
+  })
+
+  it('does not show first printed until hintsRevealed 4', () => {
+    render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={3} status="playing" variant="normal" />)
+    expect(screen.queryByText('First printed')).not.toBeInTheDocument()
+  })
+
+  it('shows first printed label at hintsRevealed 4', () => {
+    render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={4} status="playing" variant="normal" />)
     expect(screen.getByText('First printed')).toBeInTheDocument()
   })
 
-  it('shows card text label at hintsRevealed 4', () => {
-    render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={4} status="playing" variant="normal" />)
+  it('shows card text label at hintsRevealed 5', () => {
+    render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={5} status="playing" variant="normal" />)
     expect(screen.getByText('Card text')).toBeInTheDocument()
   })
 
-  it('shows flavor text label at hintsRevealed 5', () => {
+  it('shows name shape label at hintsRevealed 6', () => {
+    render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={6} status="playing" variant="normal" />)
+    expect(screen.getByText('Name shape')).toBeInTheDocument()
+  })
+
+  it('does not show name shape before the final hint', () => {
     render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={5} status="playing" variant="normal" />)
-    expect(screen.getByText('Flavor text')).toBeInTheDocument()
+    expect(screen.queryByText('Name shape')).not.toBeInTheDocument()
   })
 
   it('shows all hints when status is won', () => {
@@ -176,6 +200,33 @@ describe('HintPanel component', () => {
     expect(screen.getByText('First printed')).toBeInTheDocument()
     expect(screen.getByText('Card text')).toBeInTheDocument()
     expect(screen.getByText('Flavor text')).toBeInTheDocument()
+    expect(screen.getByText('Name shape')).toBeInTheDocument()
+  })
+
+  it('renders the name shape of the answer', () => {
+    render(<HintPanel card={CARD_LIGHTNING_BOLT} hintsRevealed={6} status="playing" variant="normal" />)
+    expect(screen.getByText('█████████ ████')).toBeInTheDocument()
+  })
+
+  it('falls back to the reprints label when the card has no flavor text', () => {
+    render(<HintPanel card={CARD_LIGHTNING_BOLT} hintsRevealed={3} status="playing" variant="normal" />)
+    expect(screen.getByText('Reprints')).toBeInTheDocument()
+    expect(screen.queryByText('Flavor text')).not.toBeInTheDocument()
+  })
+
+  it('renders the reprint count in place of missing flavor text', () => {
+    render(<HintPanel card={CARD_LIGHTNING_BOLT} hintsRevealed={3} status="playing" variant="normal" />)
+    expect(screen.getByText('Reprinted in 8 other sets')).toBeInTheDocument()
+  })
+
+  it('keeps the flavor text label when the card has flavor text', () => {
+    render(<HintPanel card={CARD_COUNTERSPELL} hintsRevealed={3} status="playing" variant="normal" />)
+    expect(screen.getByText('Flavor text')).toBeInTheDocument()
+    expect(screen.queryByText('Reprints')).not.toBeInTheDocument()
+  })
+
+  it('has one hint rung per guess', () => {
+    expect(HINT_COUNT).toBe(MAX_GUESSES)
   })
 
   it('bonus variant shows "Unique flavor word(s)" label', () => {
@@ -303,7 +354,7 @@ describe('first_printed platform tag rendering', () => {
     render(
       <HintPanel
         card={{ ...CARD_COUNTERSPELL, ...extra }}
-        hintsRevealed={3}
+        hintsRevealed={4}
         status="playing"
         variant="normal"
       />
@@ -363,9 +414,91 @@ describe('first_printed spoiler redaction', () => {
       first_set_name: 'Kamigawa',
       first_printed_year: '2004',
     }
-    render(<HintPanel card={card} hintsRevealed={3} status="playing" variant="normal" />)
+    render(<HintPanel card={card} hintsRevealed={4} status="playing" variant="normal" />)
     const hintPanel = screen.getByText('First printed').closest('.hint-row')
     expect(hintPanel.textContent).not.toContain('Kamigawa')
     expect(hintPanel.querySelector('.redacted')).toBeTruthy()
+  })
+})
+
+
+// ── formatReprints ────────────────────────────────────────────────────────────
+
+describe('formatReprints', () => {
+  it('reports a single-set card as never reprinted', () => {
+    expect(formatReprints({ printing_set_count: 1 })).toBe('Never reprinted')
+  })
+
+  it('uses the singular for exactly one other set', () => {
+    expect(formatReprints({ printing_set_count: 2 })).toBe('Reprinted in 1 other set')
+  })
+
+  it('uses the plural for more than one other set', () => {
+    expect(formatReprints({ printing_set_count: 9 })).toBe('Reprinted in 8 other sets')
+  })
+
+  it('returns "—" when no printing data was recorded', () => {
+    expect(formatReprints({ printing_set_count: 0 })).toBe('—')
+  })
+
+  it('returns "—" for an old-shaped card object', () => {
+    expect(formatReprints({})).toBe('—')
+  })
+})
+
+// ── nameShape ─────────────────────────────────────────────────────────────────
+
+describe('nameShape', () => {
+  it('blanks every letter', () => {
+    expect(nameShape('Counterspell')).toBe('████████████')
+  })
+
+  it('preserves spaces between words', () => {
+    expect(nameShape('Lightning Bolt')).toBe('█████████ ████')
+  })
+
+  it('preserves commas', () => {
+    expect(nameShape('Urza, Lord')).toBe('████, ████')
+  })
+
+  it('preserves apostrophes and hyphens', () => {
+    expect(nameShape("Lim-Dul's Vault")).toBe("███-███'█ █████")
+  })
+
+  it('blanks accented letters', () => {
+    expect(nameShape("Lim-Dûl's Vault")).toBe("███-███'█ █████")
+  })
+
+  it('blanks digits', () => {
+    expect(nameShape('+2 Mace')).toBe('+█ ████')
+  })
+
+  it('preserves the split-card separator', () => {
+    expect(nameShape('Fire // Ice')).toBe('████ // ███')
+  })
+
+  it('preserves literal underscores in a card name', () => {
+    expect(nameShape('Wolf in _____ Clothing')).toBe('████ ██ _____ ████████')
+  })
+
+  it('leaves an all-underscore name untouched', () => {
+    expect(nameShape('_____')).toBe('_____')
+  })
+
+  it('preserves the registered sign', () => {
+    expect(nameShape('Coast®')).toBe('█████®')
+  })
+
+  it('preserves the modifier colon', () => {
+    expect(nameShape('Ratonhnhaké꞉ton')).toBe('███████████꞉███')
+  })
+
+  it('preserves em dashes', () => {
+    expect(nameShape('Human—Time')).toBe('█████—████')
+  })
+
+  it('preserves the exact length of the name', () => {
+    const name = 'The Ultimate Nightmare of Wizards of the Coast® Customer Service'
+    expect(nameShape(name)).toHaveLength(name.length)
   })
 })

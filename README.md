@@ -5,14 +5,15 @@ A daily Magic: The Gathering guessing game. Each puzzle gives you a word that ap
 
 ## How to play
 
-You have **6 guesses**. Hints are revealed one at a time after each wrong guess:
+You have **7 guesses**. Hints are revealed one at a time after each wrong guess:
 
 1. The unique word(s) (always shown)
 2. Mana cost
 3. Card type
-4. First printed in
-5. Card text
-6. Flavor text
+4. Flavor text — or, for the many cards that have none, how many sets the card has been printed in
+5. First printed in
+6. Card text
+7. Name shape — the answer with its letters and digits blanked out
 
 Use the autocomplete search to pick a card name. The answer is revealed if you run out of guesses.
 

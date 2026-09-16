@@ -13,6 +13,7 @@ export const CARD_COUNTERSPELL = {
   first_set_name: 'Limited Edition Beta',
   first_printed_year: '1993',
   first_printed_platform: 'Paper',
+  printing_set_count: 12,
 }
 
 export const CARD_LIGHTNING_BOLT = {
@@ -30,6 +31,7 @@ export const CARD_LIGHTNING_BOLT = {
   first_set_name: 'Limited Edition Alpha',
   first_printed_year: '1993',
   first_printed_platform: 'Paper',
+  printing_set_count: 9,
 }
 
 export const CARD_POOL = [CARD_COUNTERSPELL, CARD_LIGHTNING_BOLT]
