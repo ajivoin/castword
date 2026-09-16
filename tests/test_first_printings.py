@@ -15,6 +15,8 @@ from first_printings import (
     download_default_cards,
     earliest_printings,
     load_first_printings,
+    load_printing_facts,
+    printing_facts,
 )
 
 
@@ -305,3 +307,135 @@ class TestDownloadDefaultCards:
 
         assert not dest.exists()
         assert list(tmp_path.iterdir()) == []
+
+
+# ── printing_facts ───────────────────────────────────────────────────────────
+
+class TestPrintingFactsSetCount:
+    def test_single_printing_counts_one_set(self):
+        recs = [printing("abc", "Alpha", "1993-08-05", set="lea")]
+        assert printing_facts(recs)["abc"]["printing_set_count"] == 1
+
+    def test_distinct_sets_are_counted(self):
+        recs = [
+            printing("abc", "Alpha", "1993-08-05", set="lea"),
+            printing("abc", "Revised", "1994-04-11", set="3ed"),
+        ]
+        assert printing_facts(recs)["abc"]["printing_set_count"] == 2
+
+    def test_variants_within_one_set_count_once(self):
+        """Foil, promo, and showcase printings share a set code."""
+        recs = [
+            printing("abc", "Innistrad", "2011-09-30", set="isd", collector_number="1"),
+            printing("abc", "Innistrad", "2011-09-30", set="isd", collector_number="1s"),
+            printing("abc", "Innistrad", "2011-09-30", set="isd", collector_number="2"),
+        ]
+        assert printing_facts(recs)["abc"]["printing_set_count"] == 1
+
+    def test_digital_printings_do_not_inflate_paper_count(self):
+        recs = [
+            printing("abc", "Alpha", "1993-08-05", set="lea"),
+            printing("abc", "Masters 25 Online", "2018-03-16", set="mtgo", games=("mtgo",)),
+        ]
+        assert printing_facts(recs)["abc"]["printing_set_count"] == 1
+
+    def test_digital_only_card_counts_its_digital_sets(self):
+        recs = [
+            printing("abc", "Alchemy: Innistrad", "2021-12-09", set="ymid", games=("arena",)),
+            printing("abc", "Alchemy Horizons", "2022-06-02", set="hbg", games=("arena",)),
+        ]
+        assert printing_facts(recs)["abc"]["printing_set_count"] == 2
+
+    def test_printing_without_a_set_code_is_not_counted(self):
+        recs = [printing("abc", "Alpha", "1993-08-05")]
+        assert printing_facts(recs)["abc"]["printing_set_count"] == 0
+
+    def test_unreleased_printing_is_not_counted(self):
+        recs = [
+            printing("abc", "Alpha", "1993-08-05", set="lea"),
+            printing("abc", "Spoiler Season", "", set="future", games=()),
+        ]
+        assert printing_facts(recs)["abc"]["printing_set_count"] == 1
+
+
+class TestPrintingFactsFlavorText:
+    def test_flavor_text_is_collected(self):
+        recs = [printing("abc", "Alpha", "1993-08-05", set="lea", flavor_text="A wall of fire.")]
+        assert printing_facts(recs)["abc"]["flavor_text"] == "A wall of fire."
+
+    def test_earliest_printing_with_flavor_text_wins(self):
+        recs = [
+            printing("abc", "Revised", "1994-04-11", set="3ed", flavor_text="Later words."),
+            printing("abc", "Alpha", "1993-08-05", set="lea", flavor_text="Original words."),
+        ]
+        assert printing_facts(recs)["abc"]["flavor_text"] == "Original words."
+
+    def test_printings_without_flavor_text_are_skipped(self):
+        recs = [
+            printing("abc", "Alpha", "1993-08-05", set="lea"),
+            printing("abc", "Revised", "1994-04-11", set="3ed", flavor_text="Only words."),
+        ]
+        assert printing_facts(recs)["abc"]["flavor_text"] == "Only words."
+
+    def test_no_flavor_text_anywhere_yields_empty_string(self):
+        recs = [printing("abc", "Alpha", "1993-08-05", set="lea")]
+        assert printing_facts(recs)["abc"]["flavor_text"] == ""
+
+    def test_paper_flavor_text_beats_earlier_digital_flavor_text(self):
+        recs = [
+            printing("abc", "Arena Set", "2019-01-01", set="ana", games=("arena",),
+                     flavor_text="Digital words."),
+            printing("abc", "Alpha", "1993-08-05", set="lea", flavor_text="Paper words."),
+        ]
+        assert printing_facts(recs)["abc"]["flavor_text"] == "Paper words."
+
+    def test_multi_face_flavor_text_is_joined(self):
+        rec = printing("abc", "Innistrad", "2011-09-30", set="isd")
+        rec["card_faces"] = [
+            {"flavor_text": "Front words."},
+            {"flavor_text": "Back words."},
+        ]
+        assert printing_facts([rec])["abc"]["flavor_text"] == "Front words.\n//\nBack words."
+
+    def test_single_faced_flavor_text_on_one_face_only(self):
+        rec = printing("abc", "Innistrad", "2011-09-30", set="isd")
+        rec["card_faces"] = [{"flavor_text": "Front words."}, {}]
+        assert printing_facts([rec])["abc"]["flavor_text"] == "Front words."
+
+
+class TestPrintingFactsSharesEarliestPrintingContract:
+    def test_entries_carry_the_first_printing_fields(self):
+        entry = printing_facts([printing("abc", "Alpha", "1993-08-05", set="lea")])["abc"]
+        assert entry["set_name"] == "Alpha"
+        assert entry["released_at"] == "1993-08-05"
+        assert entry["platform"] == "Paper"
+
+    def test_earliest_printings_exposes_only_the_first_printing_fields(self):
+        """earliest_printings() stays a narrow view over the same single pass."""
+        recs = [printing("abc", "Alpha", "1993-08-05", set="lea", flavor_text="Words.")]
+        assert earliest_printings(recs)["abc"] == {
+            "set_name": "Alpha",
+            "released_at": "1993-08-05",
+            "platform": "Paper",
+        }
+
+
+# ── load_printing_facts ──────────────────────────────────────────────────────
+
+class TestLoadPrintingFacts:
+    def test_reads_gzipped_json_lines(self, tmp_path):
+        path = tmp_path / "default-cards.jsonl.gz"
+        with gzip.open(path, "wt", encoding="utf-8") as f:
+            for rec in [
+                printing("abc", "Revised", "1994-04-11", set="3ed", flavor_text="Words."),
+                printing("abc", "Alpha", "1993-08-05", set="lea"),
+            ]:
+                f.write(json.dumps(rec) + "\n")
+
+        result = load_printing_facts(path)
+        assert result["abc"]["set_name"] == "Alpha"
+        assert result["abc"]["printing_set_count"] == 2
+        assert result["abc"]["flavor_text"] == "Words."
+
+    def test_missing_file_yields_empty_map(self, tmp_path):
+        assert load_printing_facts(tmp_path / "absent.jsonl.gz") == {}

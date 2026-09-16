@@ -46,7 +46,9 @@ If you modify card filtering logic, regenerate the game datasets:
 python prepare_data.py
 ```
 
-Data files in `src/data/` are checked into the repo and must be regenerated when the pipeline changes. `fetch_edhrec.py` makes network requests and caches results; run it separately only when EDHRec data needs refreshing.
+Data files in `src/data/` are **generated, not committed** — `.gitignore` excludes the whole directory, and `.github/workflows/deploy.yml` runs `prepare_data.py` on every deploy (the Scryfall bulk files are cached weekly). Regenerate them locally whenever the pipeline changes, so the dev server and your test run reflect the change.
+
+Because they are absent from a fresh clone, any test that reads `src/data/*.json` must skip when the files aren't there: the `test-python` CI job does not generate them, and Vitest's `globalSetup` only writes empty `[]` stubs. `fetch_edhrec.py` makes network requests and caches results; run it separately only when EDHRec data needs refreshing.
 
 ## Code conventions
 

@@ -27,7 +27,7 @@ from unique_words import (
     tokenize,
     download_bulk_file,
 )
-from first_printings import ensure_default_cards, load_first_printings
+from first_printings import ensure_default_cards, load_printing_facts
 
 BULK_FILE         = Path(__file__).parent / "oracle-cards.json"
 DEFAULT_CARDS     = Path(__file__).parent / "default-cards.jsonl.gz"
@@ -120,6 +120,36 @@ def first_printed_fields(entry: dict | None) -> dict:
     }
 
 
+def printing_fields(entry: dict | None, flavor_text: str) -> dict:
+    """
+    Convert one printing-facts entry (or None) plus the card's own flavor
+    text into the flavor_text/printing_set_count fields threaded into the
+    output datasets.
+
+    The card's own flavor text — from its most recent printing — wins when
+    it has any. Many cards dropped their flavor text in a later printing,
+    or never had one; for those, the earliest printing that carried flavor
+    text fills the hint instead.
+
+    Never raises on a malformed entry — blank fields instead, which is how
+    "no printing data" is represented.
+    """
+    fallback = ""
+    count = 0
+    if isinstance(entry, dict):
+        candidate = entry.get("flavor_text")
+        if isinstance(candidate, str):
+            fallback = candidate
+        candidate = entry.get("printing_set_count")
+        if isinstance(candidate, int) and not isinstance(candidate, bool):
+            count = candidate
+
+    return {
+        "flavor_text": flavor_text or fallback,
+        "printing_set_count": count,
+    }
+
+
 def flavor_exclusive_words(card: dict, unique_words: list[str]) -> list[str]:
     """Return the subset of unique_words that appear in flavor text but NOT in oracle text."""
     faces = card.get("card_faces") or [card]
@@ -158,8 +188,8 @@ def main():
     # derived from the default-cards bulk file — which, unlike oracle-cards,
     # holds every printing of every card. Downloaded on demand like the
     # oracle-cards dump above.
-    first_printings = load_first_printings(ensure_default_cards(DEFAULT_CARDS))
-    print(f"  First printings: {len(first_printings):,} cards with a first printing.", file=sys.stderr)
+    facts = load_printing_facts(ensure_default_cards(DEFAULT_CARDS))
+    print(f"  Printing facts: {len(facts):,} cards with a printing history.", file=sys.stderr)
 
     # Build enrichment lookup: oracle_id -> extra fields
     card_lookup: dict[str, dict] = {c["oracle_id"]: c for c in filtered if c.get("oracle_id")}
@@ -169,10 +199,10 @@ def main():
             "mana_cost": card.get("mana_cost", ""),
             "colors": card.get("colors", []),
             "oracle_text": get_oracle_text(card),
-            "flavor_text": get_flavor_text(card),
             "image_url": get_image_url(card),
             "image_url_back": get_image_url_back(card),
-            **first_printed_fields(first_printings.get(oid)),
+            **first_printed_fields(facts.get(oid)),
+            **printing_fields(facts.get(oid), get_flavor_text(card)),
         }
 
     # ── Normal game data (oracle-text unique words, mainline sets only) ──────
@@ -200,11 +230,13 @@ def main():
             "mana_cost": extra.get("mana_cost", ""),
             "colors": extra.get("colors", []),
             "oracle_text": extra.get("oracle_text", ""),
+            "flavor_text": extra.get("flavor_text", ""),
             "image_url": extra.get("image_url", ""),
             "image_url_back": extra.get("image_url_back", ""),
             "first_set_name": extra.get("first_set_name", ""),
             "first_printed_year": extra.get("first_printed_year", ""),
             "first_printed_platform": extra.get("first_printed_platform", ""),
+            "printing_set_count": extra.get("printing_set_count", 0),
             "unique_words": entry["unique_words"],
         })
 
@@ -241,6 +273,7 @@ def main():
             "first_set_name": extra.get("first_set_name", ""),
             "first_printed_year": extra.get("first_printed_year", ""),
             "first_printed_platform": extra.get("first_printed_platform", ""),
+            "printing_set_count": extra.get("printing_set_count", 0),
             "unique_words": exclusive,
         })
     flavor_data.sort(key=lambda r: r["name"])
@@ -273,6 +306,7 @@ def main():
             "first_set_name": extra.get("first_set_name", ""),
             "first_printed_year": extra.get("first_printed_year", ""),
             "first_printed_platform": extra.get("first_printed_platform", ""),
+            "printing_set_count": extra.get("printing_set_count", 0),
             "unique_words": entry["unique_words"],
         })
     print(f"  {len(wildcard_data):,} wildcard puzzle cards found.", file=sys.stderr)
@@ -327,6 +361,7 @@ def main():
             "first_set_name":     extra.get("first_set_name", ""),
             "first_printed_year": extra.get("first_printed_year", ""),
             "first_printed_platform": extra.get("first_printed_platform", ""),
+            "printing_set_count": extra.get("printing_set_count", 0),
             "unique_words":   entry["unique_words"],
             "edhrec_rank":    card_lookup[oid].get("edhrec_rank") if oid in card_lookup else None,
         })
